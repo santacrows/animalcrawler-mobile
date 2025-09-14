@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Animal Crawler (Mobile)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Press-Start-2P', cursive;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none;
+        }
+        .game-container {
+            border: 4px solid #4a4a4a;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            background-color: #000;
+            width: 100%;
+        }
+        canvas {
+            background-color: #111;
+            display: block;
+        }
+        .message-log {
+            border: 2px solid #4a4a4a;
+            overflow-y: scroll;
+            padding: 10px;
+            background-color: #2a2a2a;
+            line-height: 1.6;
+            font-size: 0.8rem;
+        }
+        .message-log::-webkit-scrollbar { width: 8px; }
+        .message-log::-webkit-scrollbar-track { background: #2a2a2a; }
+        .message-log::-webkit-scrollbar-thumb { background-color: #888; border-radius: 4px; border: 2px solid #2a2a2a; }
+        .status-bar, .info-bar { background-color: #2a2a2a; border: 2px solid #4a4a4a; }
+        .health-bar-bg, .xp-bar-bg { background-color: #555; border-radius: 4px; overflow: hidden; }
+        .health-bar { background-color: #d9534f; height: 100%; transition: width 0.3s ease-in-out; }
+        .xp-bar { background-color: #5bc0de; height: 100%; transition: width 0.3s ease-in-out; }
+        .modal { background-color: rgba(0, 0, 0, 0.9); transition: opacity 0.5s; }
+        .character-card {
+            border: 2px solid #666;
+            transition: all 0.2s ease-in-out;
+        }
+        .character-card:active {
+            border-color: #ffd700;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
+        }
+
+        @keyframes stat-flash {
+            0%, 100% {
+                color: #f0f0f0;
+                transform: scale(1);
+            }
+            50% {
+                color: #ffd700;
+                transform: scale(1.25);
+            }
+        }
+        .stat-increase-animation {
+            animation: stat-flash 0.6s ease-in-out;
+        }
+        #touch-controls {
+            position: fixed; /* Use fixed positioning for dragging */
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center h-screen p-2">
+
+    <!-- Game UI (Initially Hidden) -->
+    <div id="game-ui" class="w-full max-w-7xl mx-auto flex flex-col items-stretch gap-2 h-full hidden">
+        <!-- Top Section: Canvas + Status -->
+        <div class="flex flex-col gap-2 h-3/5">
+            <div class="game-container flex justify-center items-center flex-grow">
+                <canvas id="gameCanvas"></canvas>
+            </div>
+            <div class="status-bar p-2 rounded-lg text-sm">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm">HP:</span>
+                    <div class="w-1/2 mx-2"><div class="health-bar-bg w-full h-5"><div id="playerHealthBar" class="health-bar" style="width: 100%;"></div></div></div>
+                    <span id="playerHealthText" class="text-sm font-bold">100/100</span>
+                </div>
+                 <div class="flex justify-between items-center mt-2">
+                    <span class="text-sm">XP:</span>
+                    <div class="w-1/2 mx-2"><div class="xp-bar-bg w-full h-5"><div id="playerXpBar" class="xp-bar" style="width: 0%;"></div></div></div>
+                    <span id="playerXpText" class="text-sm font-bold">0/100</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Section: UI -->
+        <div class="flex flex-col gap-2 h-2/5">
+            <div class="flex gap-2 w-full">
+                 <div class="info-bar p-2 rounded-lg text-center w-1/3">
+                    <h3 class="text-yellow-400 text-xs mb-1">Level</h3><p id="levelCounter" class="text-2xl font-bold"></p>
+                </div>
+
+                <div class="info-bar p-2 rounded-lg text-center w-2/3">
+                    <h3 class="text-yellow-400 text-xs mb-1">Character</h3>
+                    <p class="text-lg"><span id="playerSprite"></span> <span id="playerClass"></span></p>
+                    <p class="text-base text-gray-400">Rank <span id="playerRank">1</span></p>
+                </div>
+            </div>
+
+            <div class="info-bar p-2 rounded-lg text-xs">
+                 <div class="grid grid-cols-3 justify-around items-center text-center">
+                    <div><h3 class="text-yellow-400 text-xs mb-1">Attack</h3><p id="playerAttack" class="text-base"></p></div>
+                    <div><h3 class="text-yellow-400 text-xs mb-1">Defense</h3><p id="playerDefense" class="text-base"></p></div>
+                    <div><h3 class="text-yellow-400 text-xs mb-1">Speed</h3><p id="playerSpeed" class="text-base"></p></div>
+                </div>
+            </div>
+
+            <div id="messageLog" class="message-log rounded-lg flex-grow"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="characterSelectionModal" class="modal fixed inset-0 flex items-center justify-center z-10 p-2">
+        <div class="text-center p-4 bg-gray-900 rounded-xl border-4 border-yellow-500 shadow-lg w-full max-w-7xl h-[95vh] flex flex-col overflow-y-auto">
+            <h2 class="text-2xl text-yellow-400 mb-4">Choose your Animal</h2>
+            <div id="characterGrid" class="grid grid-cols-3 gap-2 flex-grow"></div>
+        </div>
+    </div>
+    <div id="gameOverModal" class="modal fixed inset-0 items-center justify-center z-20 opacity-0 pointer-events-none hidden">
+        <div class="text-center p-8 bg-gray-900 rounded-xl border-4 border-yellow-500 shadow-lg">
+            <h2 id="gameOverTitle" class="text-5xl mb-4 text-red-500"></h2>
+            <p id="gameOverText" class="text-xl mb-6"></p>
+            <button onclick="resetGame()" class="px-6 py-3 bg-yellow-500 text-black rounded-lg text-lg hover:bg-yellow-400 transition-colors">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Touch Controls for Mobile -->
+    <div id="touch-controls" class="grid grid-cols-3 grid-rows-3 w-52 h-52 opacity-75" style="position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);">
+        <button id="touch-up" class="col-start-2 row-start-1 bg-gray-700 border-2 border-gray-500 rounded-md text-3xl active:bg-gray-500">▲</button>
+        <button id="touch-left" class="col-start-1 row-start-2 bg-gray-700 border-2 border-gray-500 rounded-md text-3xl active:bg-gray-500">◀</button>
+        <button id="move-controls" class="col-start-2 row-start-2 bg-gray-600 border-2 border-gray-500 rounded-full text-2xl active:bg-gray-500 cursor-grab active:cursor-grabbing">✥</button>
+        <button id="touch-right" class="col-start-3 row-start-2 bg-gray-700 border-2 border-gray-500 rounded-md text-3xl active:bg-gray-500">▶</button>
+        <button id="touch-down" class="col-start-2 row-start-3 bg-gray-700 border-2 border-gray-500 rounded-md text-3xl active:bg-gray-500">▼</button>
+    </div>
+
+    <script>
+        // DOM Elements
+        const elements = {
+            canvas: document.getElementById('gameCanvas'),
+            messageLog: document.getElementById('messageLog'),
+            playerHealthBar: document.getElementById('playerHealthBar'),
+            playerHealthText: document.getElementById('playerHealthText'),
+            playerXpBar: document.getElementById('playerXpBar'),
+            playerXpText: document.getElementById('playerXpText'),
+            playerRank: document.getElementById('playerRank'),
+            gameOverModal: document.getElementById('gameOverModal'),
+            gameOverTitle: document.getElementById('gameOverTitle'),
+            gameOverText: document.getElementById('gameOverText'),
+            gameUI: document.getElementById('game-ui'),
+            characterSelectionModal: document.getElementById('characterSelectionModal'),
+            characterGrid: document.getElementById('characterGrid'),
+            levelCounter: document.getElementById('levelCounter'),
+            playerSprite: document.getElementById('playerSprite'),
+            playerClass: document.getElementById('playerClass'),
+            playerAttack: document.getElementById('playerAttack'),
+            playerDefense: document.getElementById('playerDefense'),
+            playerSpeed: document.getElementById('playerSpeed'),
+        };
+        const ctx = elements.canvas.getContext('2d');
+
+        // --- Game Configuration ---
+        let TILE_SIZE = 32;
+        const MAP_WIDTH = 15;
+        const MAP_HEIGHT = 20;
+        const ACTION_COST = 100; // The amount of "action points" needed to take a turn
+
+        const SPRITES = {
+            WALLS: ['🌲', '🌳', '🌴', '🌿',],
+            FLOOR: ' ',
+            RUNNER: '🏃',
+            PERSON: '🧍',
+            CARTWHEELER: '🤸',
+            WALKER: '🚶‍',
+            JUGGLER: '🤾',
+            LIFTER: '🏋️',
+            PARTNERS: '🧑‍🤝‍🧑',
+            GOLFER: '🏌️',
+            KNEELER: '🧎‍',
+	    BALLER: '⛹️',
+	    FENCER: '🤺',
+            PORTAL: '🕳️',
+            CHEST: '🎁'
+        };
+
+        const BIOMES = [
+            { name: 'a Savanna', walls: ['🌳', '🌿', '🌾'] },
+            { name: 'the Jungle', walls: ['🌴', '🌱', '🍃','🌺'] },
+            { name: 'a Forest', walls: ['🌲','🌳','🍄','🪵'] },
+			{ name: 'a Graveyard', walls: ['🍂','🪵','🦇', '🕸️', '🪦', '⚰️'] },
+			{ name: 'the Sky', walls: ['☁️','🌈','⛅','🌦️','🌧️'] }, 
+            { name: 'a Desert', walls: ['🏜️', '🪨', '🌵', '☀️'] },
+            { name: 'the Mountains', walls: ['⛰️', '🗻', '🗿'] },
+            { name: 'a Swamp', walls: ['🍃', '🪵', '🌱', '🐸'] },
+            { name: 'a Meadow', walls: ['🌻','🌷','🌼','🌾','🌹'] },
+            { name: 'the City', walls: ['🏢','🏘️','🏠','🏬','🏭','🏫','🚕','🚧'] },
+            { name: 'the Ocean', walls: ['🌊','🐚','🫧','🪸',]},
+            { name: 'Space', walls: ['⭐','🌙','🪐']},
+			{ name: 'a Glacier', walls: ['🧊','❄️','🐧']},
+			{ name: 'a Tea Party', walls: ['🎂','🎀','🫖','🍰','🧁','🎉','🍭', '🍬', '🍫', '🍩']},
+			{ name: 'a Volcano', walls: ['🌋','🔥','🌑']},
+            { name: 'an Arcade', walls: ['👾', '🕹️', '🪩', '🤖','🎮','🎆','🌃'] },
+            { name: 'the Crystal Caverns', walls: ['💎', '💠', '🔮', '✨'] },
+            { name: 'a Shipwreck', walls: ['🏝️','⛵', '🏴‍☠️', '⚓','🗺️'] },
+            { name: 'an Office', walls: ['🗄️','🖥️', '💻', '⌨️', '📠', '🖨️', '💾', '🖱️', '📎','🗑️',] },
+			{ name: 'the Circus', walls: ['🎪', '🤡', '🎠', '🎡', '🎈', '🥜'] }	
+        ];
+
+        const FOODS = [
+            { sprite: '🍎', healAmount: 35 },
+            { sprite: '🍇', healAmount: 30 },
+            { sprite: '🍌', healAmount: 25 },
+            { sprite: '🍓', healAmount: 20 },
+            { sprite: '🍒', healAmount: 15 }
+        ];
+
+        // --- Game Data ---
+        const ORIGINAL_CHARACTERS = [
+            { id: 10, name: 'Kangaroo',  sprite: '🦘', hp: 100, attack: 19, defense: 8,  speed: 21 }, 
+            { id: 12, name: 'Snake',     sprite: '🐍', hp: 120,  attack: 22, defense: 6,  speed: 19 }, 
+            { id: 0,  name: 'Tiger',     sprite: '🐅', hp: 110, attack: 20, defense: 9,  speed: 20 }, 
+            { id: 15, name: 'Leopard',   sprite: '🐆', hp: 130, attack: 17, defense: 11, speed: 20 }, 
+            { id: 3,  name: 'Horse',     sprite: '🐎', hp: 140, attack: 16, defense: 10, speed: 21 }, 
+            { id: 13, name: 'Butterfly', sprite: '🦋', hp: 130, attack: 12, defense: 12, speed: 23 }, 
+            { id: 9,  name: 'Flamingo',  sprite: '🦩', hp: 145, attack: 15, defense: 14, speed: 19 }, 
+            { id: 4,  name: 'Orangutan', sprite: '🦧', hp: 155, attack: 17, defense: 12, speed: 18 }, 
+            { id: 6,  name: 'Crocodile', sprite: '🐊', hp: 170, attack: 19, defense: 11, speed: 16 }, 
+            { id: 2,  name: 'Camel',     sprite: '🐫', hp: 180, attack: 14, defense: 15, speed: 17 }, 
+            { id: 5,  name: 'Badger',    sprite: '🦡', hp: 170, attack: 17, defense: 16, speed: 16 }, 
+            { id: 14, name: 'Bison',     sprite: '🦬', hp: 180, attack: 16, defense: 14, speed: 16 }, 
+            { id: 16, name: 'Beaver',    sprite: '🦫', hp: 200, attack: 14, defense: 19, speed: 15 }, 
+            { id: 7,  name: 'Hippo',     sprite: '🦛', hp: 210, attack: 15, defense: 17, speed: 14 }, 
+            { id: 1,  name: 'Elephant',  sprite: '🐘', hp: 220, attack: 14, defense: 18, speed: 14 }, 
+            { id: 8,  name: 'Buffalo',   sprite: '🐃', hp: 230, attack: 13, defense: 20, speed: 13 }, 
+            { id: 11, name: 'Turtle',    sprite: '🐢', hp: 200, attack: 12,  defense: 23, speed: 12 }, 
+            { id: 17, name: 'Sloth',     sprite: '🦥', hp: 250, attack: 14,  defense: 21, speed: 11  },
+            { id: 18, name: 'Rhino',     sprite: '🦏', hp: 260, attack: 15, defense: 24, speed: 10 },
+            { id: 19, name: 'Giraffe',   sprite: '🦒', hp: 190, attack: 16, defense: 13, speed: 19 },
+            { id: 20, name: 'Zebra',     sprite: '🦓', hp: 120, attack: 14, defense: 9,  speed: 22 },
+            { id: 21, name: 'Gorilla',   sprite: '🦍', hp: 240, attack: 18, defense: 22, speed: 12 },
+            { id: 22, name: 'Owl',       sprite: '🦉', hp: 110, attack: 18, defense: 10, speed: 23 },
+        ];
+        let CHARACTERS = JSON.parse(JSON.stringify(ORIGINAL_CHARACTERS));
+        
+        // --- Game State ---
+        let map = [], player = {}, enemies = [], items = [], portal = {}, animations = [], gameOver = false, dungeonLevel = 1, currentBiome = {}, turnCount = 0, isPlayerTurn = true;
+        let lastPlayerStats = {};
+        let isIntroAnimating = false;
+        let mapCanvas; // Off-screen canvas for rendering the static map background
+        let inputCooldown = 0;
+        const INPUT_COOLDOWN_FRAMES = 8; // A cooldown for touch movement
+
+        // --- Game Logic ---
+        function createActor(type, x, y) {
+            const powerLevel = Math.max(0, dungeonLevel - 1);
+            const zoneHPMultiplier = Math.pow(1.1, powerLevel);
+			const zoneAttackMultiplier = Math.pow(1.09, powerLevel);
+			const zoneDefenseMultiplier = Math.pow(1.08, powerLevel);
+			const zoneSpeedMultiplier = Math.pow(1.01, powerLevel);
+
+            let baseStats;
+            switch (type) {
+                case SPRITES.RUNNER:      baseStats = { hp: 15, attack: 6,  defense: 1, vision: 11, speed: 30 }; break;
+                case SPRITES.PERSON:      baseStats = { hp: 30, attack: 4,  defense: 1, vision: 6,  speed: 15 }; break;
+                case SPRITES.CARTWHEELER: baseStats = { hp: 25, attack: 5,  defense: 1, vision: 8,  speed: 25 }; break;
+                case SPRITES.WALKER:      baseStats = { hp: 10, attack: 5,  defense: 1, vision: 7,  speed: 12 }; break;
+                case SPRITES.JUGGLER:     baseStats = { hp: 30, attack: 8,  defense: 2, vision: 8,  speed: 20 }; break;
+                case SPRITES.LIFTER:      baseStats = { hp: 40, attack: 7,  defense: 5, vision: 6,  speed: 9 }; break;
+                case SPRITES.PARTNERS:    baseStats = { hp: 65, attack: 14, defense: 2, vision: 9,  speed: 8 }; break;
+                case SPRITES.GOLFER:      baseStats = { hp: 35, attack: 10, defense: 2, vision: 7,  speed: 18 }; break;
+                case SPRITES.KNEELER:     baseStats = { hp: 50, attack: 3,  defense: 3, vision: 4,  speed: 10  }; break;
+				case SPRITES.BALLER:	  baseStats = { hp: 10, attack: 9,  defense: 1, vision: 10, speed: 15 }; break;
+				case SPRITES.FENCER:	  baseStats = { hp: 25, attack: 12, defense: 3, vision: 5,  speed: 10  }; break;
+                case SPRITES.PORTAL:      return { type, x, y };
+                case SPRITES.CHEST:       return { type, x, y };
+                default:                  return { type, x, y };
+            }
+            
+            const finalHp = Math.round(baseStats.hp * zoneHPMultiplier);
+            return {
+                type, x, y,
+                hp: finalHp,
+                maxHp: finalHp,
+                attack: Math.round(baseStats.attack * zoneAttackMultiplier),
+                defense: Math.round(baseStats.defense * zoneDefenseMultiplier),
+                vision: baseStats.vision,
+                speed: Math.round(baseStats.speed * zoneSpeedMultiplier), 
+                ap: 0,
+                hpBarTimer: 0
+            };
+        }
+
+        function generateDungeon() {
+            const biomeWalls = currentBiome.walls;
+            const wallChance = 0.45;
+            map = Array.from({ length: MAP_HEIGHT }, () => 
+                Array.from({ length: MAP_WIDTH }, () => 
+                    Math.random() < wallChance ? biomeWalls[Math.floor(Math.random() * biomeWalls.length)] : SPRITES.FLOOR
+                )
+            );
+
+            for (let i = 0; i < 4; i++) {
+                let newMap = JSON.parse(JSON.stringify(map));
+                for (let y = 1; y < MAP_HEIGHT - 1; y++) {
+                    for (let x = 1; x < MAP_WIDTH - 1; x++) {
+                        const wallNeighbors = countWallNeighbors(x, y, biomeWalls);
+                        if (!biomeWalls.includes(map[y][x])) { 
+                            if (wallNeighbors > 4) newMap[y][x] = biomeWalls[0];
+                        } else {
+                            if (wallNeighbors < 4) newMap[y][x] = SPRITES.FLOOR;
+                        }
+                    }
+                }
+                map = newMap;
+            }
+            
+            for(let y = 0; y < MAP_HEIGHT; y++) {
+                for(let x = 0; x < MAP_WIDTH; x++) {
+                    if (x === 0 || x === MAP_WIDTH - 1 || y === 0 || y === MAP_HEIGHT - 1) {
+                        map[y][x] = biomeWalls[0];
+                    }
+                }
+            }
+
+            const obstacleChance = 0.12; 
+            for (let y = 1; y < MAP_HEIGHT - 1; y++) {
+                for (let x = 1; x < MAP_WIDTH - 1; x++) {
+                    if (map[y][x] === SPRITES.FLOOR && Math.random() < obstacleChance) {
+                        map[y][x] = biomeWalls[Math.floor(Math.random() * biomeWalls.length)];
+                    }
+                }
+            }
+            connectRegions(biomeWalls);
+
+            const floorTiles = [];
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    if (map[y][x] === SPRITES.FLOOR) { floorTiles.push({ x, y }); }
+                }
+            }
+            
+            for (let i = floorTiles.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [floorTiles[i], floorTiles[j]] = [floorTiles[j], floorTiles[i]];
+            }
+
+            enemies = [];
+            items = [];
+            
+            const playerPos = floorTiles.pop();
+            player.x = playerPos.x;
+            player.y = playerPos.y;
+
+            const portalPos = floorTiles.find(tile => {
+                const dx = tile.x - player.x;
+                const dy = tile.y - player.y;
+                return (dx * dx + dy * dy) > 100; 
+            }) || floorTiles.pop();
+
+            if (portalPos) {
+                 portal = createActor(SPRITES.PORTAL, portalPos.x, portalPos.y);
+                 const portalIndex = floorTiles.findIndex(t => t.x === portalPos.x && t.y === portalPos.y);
+                 if(portalIndex > -1) floorTiles.splice(portalIndex, 1);
+            }
+           
+            const maxEnemies = Math.min(floorTiles.length -1, 2 + dungeonLevel);
+            for (let i = 0; i < maxEnemies && floorTiles.length > 0; i++) {
+                const pos = floorTiles.pop();
+                const enemyTypes = [
+                    SPRITES.RUNNER, SPRITES.PERSON, SPRITES.CARTWHEELER, SPRITES.WALKER, 
+                    SPRITES.JUGGLER, SPRITES.LIFTER, SPRITES.PARTNERS, SPRITES.GOLFER, 
+		    SPRITES.KNEELER, SPRITES.BALLER, SPRITES.FENCER
+                ];
+                const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+                enemies.push(createActor(type, pos.x, pos.y));
+            }
+
+            const maxItems = Math.min(floorTiles.length, 1 + Math.floor(dungeonLevel / 2));
+            for (let i = 0; i < maxItems && floorTiles.length > 0; i++) {
+                const pos = floorTiles.pop();
+                if (Math.random() > 0.7) {
+                    items.push(createActor(SPRITES.CHEST, pos.x, pos.y));
+                } else {
+                    const randomFood = FOODS[Math.floor(Math.random() * FOODS.length)];
+                    items.push({ type: 'food', ...randomFood, x: pos.x, y: pos.y });
+                }
+            }
+        }
+        
+        function countWallNeighbors(x, y, biomeWalls) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    const nx = x + i;
+                    const ny = y + j;
+                    if (nx < 0 || nx >= MAP_WIDTH || ny < 0 || ny >= MAP_HEIGHT || biomeWalls.includes(map[ny][nx])) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function connectRegions(biomeWalls) {
+            const regions = [];
+            const visited = Array.from({ length: MAP_HEIGHT }, () => Array(MAP_WIDTH).fill(false));
+            function floodFill(x, y, region) {
+                if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT || visited[y][x] || biomeWalls.includes(map[y][x])) return;
+                visited[y][x] = true;
+                region.push({ x, y });
+                floodFill(x + 1, y, region); floodFill(x - 1, y, region);
+                floodFill(x, y + 1, region); floodFill(x, y - 1, region);
+            }
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    if (!visited[y][x] && map[y][x] === SPRITES.FLOOR) {
+                        const newRegion = [];
+                        floodFill(x, y, newRegion);
+                        if (newRegion.length > 0) regions.push(newRegion);
+                    }
+                }
+            }
+            if (regions.length <= 1) return; 
+            regions.sort((a, b) => b.length - a.length);
+            const mainRegion = regions.shift();
+            let allConnectedPoints = [...mainRegion];
+            for (const region of regions) {
+                let bestDist = Infinity, bestPointA = null, bestPointB = null;
+                for (const pointA of region) {
+                    for (const pointB of allConnectedPoints) {
+                        const dist = Math.pow(pointA.x - pointB.x, 2) + Math.pow(pointA.y - pointB.y, 2);
+                        if (dist < bestDist) {
+                            bestDist = dist; bestPointA = pointA; bestPointB = pointB;
+                        }
+                    }
+                }
+                if (bestPointA && bestPointB) {
+                    let cx = bestPointA.x, cy = bestPointA.y;
+                    while (cx !== bestPointB.x || cy !== bestPointB.y) {
+                         if (Math.abs(bestPointB.x - cx) > Math.abs(bestPointB.y - cy)) cx += Math.sign(bestPointB.x - cx);
+                         else cy += Math.sign(bestPointB.y - cy);
+                         if(biomeWalls.includes(map[cy][cx])) map[cy][cx] = SPRITES.FLOOR;
+                    }
+                }
+                allConnectedPoints.push(...region);
+            }
+        }
+
+        function isOccupied(x, y, ignorePlayer = false) {
+            if (!ignorePlayer && player.x === x && player.y === y) return true;
+            return enemies.some(e => e.x === x && e.y === y) || items.some(i => i.x === x && i.y === y) || (portal.x === x && portal.y === y);
+        }
+
+        function isWall(x, y) { return currentBiome.walls.includes(map[y][x]); }
+
+        function movePlayer(dx, dy) {
+            if (gameOver || !isPlayerTurn) return;
+            const newX = player.x + dx, newY = player.y + dy;
+            if (newX < 0 || newX >= MAP_WIDTH || newY < 0 || newY >= MAP_HEIGHT || isWall(newX, newY)) return;
+
+            const targetEnemy = enemies.find(e => e.x === newX && e.y === newY);
+            const targetItem = items.find(i => i.x === newX && i.y === newY);
+            let actionTaken = false;
+
+            if (targetEnemy) {
+                attack(player, targetEnemy);
+                actionTaken = true;
+            } else if (targetItem) {
+                if (targetItem.type === 'food') {
+                    player.hp = Math.min(player.maxHp, player.hp + targetItem.healAmount);
+                    logMessage(`You eat ${targetItem.sprite} and heal ${targetItem.healAmount} HP.`, '#99ff99');
+                    const xpGained = Math.floor(targetItem.healAmount / 5);
+                    addXp(xpGained);
+                } else if (targetItem.type === SPRITES.CHEST) {
+                    openChest();
+                }
+                items = items.filter(i => i !== targetItem);
+                player.x = newX;
+                player.y = newY;
+                actionTaken = true;
+            } else {
+                player.x = newX;
+                player.y = newY;
+                actionTaken = true;
+            }
+
+            if (actionTaken) {
+                if (player.x === portal.x && player.y === portal.y) { initNextLevel(); return; }
+                player.ap -= ACTION_COST;
+                turnCount++;
+                isPlayerTurn = false;
+            }
+        }
+        
+        function mainTick() {
+            // This is our main loop, running on every animation frame.
+            requestAnimationFrame(mainTick);
+
+            // Don't run game logic if modals are up, game is over, or intro is playing
+            if (elements.gameUI.classList.contains('hidden') || gameOver || isIntroAnimating) {
+                return;
+            }
+
+            // Decrement the input cooldown timer each frame
+            if (inputCooldown > 0) {
+                inputCooldown--;
+            }
+            
+            if (!isPlayerTurn) {
+                // It's the AI's turn.
+                // This loop runs as many "ticks" as needed in a single frame
+                // until the player can act again. This makes AI turns feel instant.
+                while (!isPlayerTurn && !gameOver) {
+                    player.ap += player.speed;
+                    enemies.forEach(e => {
+                        if (e.hp > 0) e.ap += e.speed;
+                    });
+
+                    let readyEnemies = enemies.filter(e => e.ap >= ACTION_COST && e.hp > 0);
+                    if (readyEnemies.length > 0) {
+                        readyEnemies.sort((a, b) => b.ap - a.ap);
+                        for (const enemy of readyEnemies) {
+                            if (enemy.hp > 0 && enemy.ap >= ACTION_COST) {
+                                runEnemyAI(enemy);
+                                enemy.ap -= ACTION_COST;
+                                if (gameOver) break;
+                            }
+                        }
+                    }
+
+                    if (player.ap >= ACTION_COST) {
+                        isPlayerTurn = true;
+                    }
+                }
+            }
+
+            // Always update animations and redraw the screen after the logic for the frame is done.
+            updateAnimations();
+            draw();
+        }
+
+        function openChest() {
+            logMessage("You open a 🎁!", 'yellow');
+            const bonusType = Math.random();
+            
+            if (bonusType < 0.2) {
+                const atkBonus = Math.floor(Math.random() * 3) + 1;
+                player.baseAttack += atkBonus;
+                logMessage(`Your Attack permanently increased by ${atkBonus}!`, '#66ccff');
+            } else if (bonusType < 0.4) {
+                const defBonus = Math.floor(Math.random() * 3) + 1;
+                player.baseDefense += defBonus;
+                logMessage(`Your Defense permanently increased by ${defBonus}!`, '#66ccff');
+            } else if (bonusType < 0.6) {
+                const hpBonus = Math.floor(Math.random() * 11) + 10;
+                player.maxHp += hpBonus;
+                player.hp += hpBonus;
+                logMessage(`Your Max HP permanently increased by ${hpBonus}!`, '#d9534f');
+            } else if (bonusType < 0.8) {
+                const spdBonus = Math.floor(Math.random() * 2) + 1;
+                player.speed += spdBonus;
+                logMessage(`Your Speed permanently increased by ${spdBonus}!`, '#a875ff');
+            } else {
+                const xpBonus = Math.floor(player.xpToNextLevel * (0.2 + Math.random() * 0.3));
+                addXp(xpBonus);
+                logMessage(`You found a burst of inspiration and gained XP!`, '#5bc0de');
+            }
+        }
+
+        function attack(attacker, defender) {
+            const attackerStats = getStats(attacker);
+            const defenderStats = getStats(defender);
+            
+            let preDefenseDamage = (attacker.type)
+                ? Math.floor(Math.random() * (Math.floor(attackerStats.attack) - Math.floor(attackerStats.attack / 2) + 1)) + Math.floor(attackerStats.attack / 2)
+                : attackerStats.attack;
+
+			const damageReduction = 100 / (100 + (defenderStats.defense * 10));
+
+            const damage = Math.max(1, Math.round(preDefenseDamage * damageReduction));
+            defender.hp -= damage;
+            
+            if (defender.type) { defender.hpBarTimer = 150; }
+
+            const attackerName = attacker.name || `The ${attacker.type}`;
+            const defenderName = defender.name || `the ${defender.type}`;
+            logMessage(`${attackerName} hits ${defenderName} for ${damage} damage!`, '#ff9999');
+
+            if (defender.hp <= 0) {
+                logMessage(`${defenderName} is defeated!`, '#99ff99');
+                if (defender.type) {
+                    defender.hpBarTimer = 0;
+                    animations.push({ type: 'death', x: defender.x, y: defender.y, frames: ['💥', '💥', '💥', '💥', ' '], currentFrame: 0 });
+                    const xpGained = Math.floor(defender.maxHp / 4 + defender.attack);
+                    addXp(xpGained);
+                    enemies = enemies.filter(e => e !== defender);
+                } else { loseGame(); }
+            }
+        }
+        
+        function addXp(amount) {
+            if (!amount || amount <= 0) return;
+            player.xp += amount;
+            logMessage(`You gain ${amount} XP.`, '#5bc0de');
+            if (player.xp >= player.xpToNextLevel) { rankUp(); }
+        }
+
+        function rankUp() {
+            logMessage('RANK UP! You feel a surge of power!', '#ffd700');
+            player.rank++;
+            player.xp -= player.xpToNextLevel;
+            player.xpToNextLevel = Math.floor(100 * Math.pow(player.rank, 1.1));
+            const hpBonus = 10;
+            player.maxHp += hpBonus;
+            player.hp = player.maxHp;
+            logMessage(`HP fully restored! Max HP increased by ${hpBonus}.`, '#99ff99');
+            player.baseAttack++; logMessage('Your Attack increased!', '#66ccff'); 
+            player.baseDefense++; logMessage('Your Defense increased!', '#66ccff'); 
+			player.speed++; logMessage('Your Speed increased!', '#66ccff');
+        }
+        
+        function getStats(actor) {
+            if(actor.type) return actor;
+            return { attack: player.baseAttack, defense: player.baseDefense, speed: player.speed };
+        }
+        
+        function runEnemyAI(enemy) {
+            let moveX = 0, moveY = 0, decidedToMove = false;
+            const dx = player.x - enemy.x, dy = player.y - enemy.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < enemy.vision) {
+                if (distance < 1.5) { attack(enemy, player); return; }
+                if (enemy.type === SPRITES.CARTWHEELER) {
+                    moveX = Math.floor(Math.random() * 3) - 1;
+                    moveY = Math.floor(Math.random() * 3) - 1;
+                } else {
+                    moveX = Math.sign(dx); moveY = Math.sign(dy);
+                    if (Math.abs(dx) > Math.abs(dy)) moveY = 0; else moveX = 0;
+                }
+                decidedToMove = true;
+            }
+
+            if (decidedToMove) {
+                const newX = enemy.x + moveX, newY = enemy.y + moveY;
+                if (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT) {
+                    if (!isWall(newX, newY) && !isOccupied(newX, newY, true)) {
+                        enemy.x = newX; enemy.y = newY;
+                    }
+                }
+            }
+        }
+        
+        function initNextLevel() {
+            dungeonLevel++; animations = [];
+            currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
+            logMessage(`You fall through the hole into ${currentBiome.name}...`, '#ffd700');
+            generateDungeon();
+            preDrawMap(); // OPTIMIZATION: Redraw the map background canvas
+            player.ap = 0; 
+            isPlayerTurn = false; // Prevent input during animation
+            startIntroAnimation();
+        }
+
+        function loseGame() {
+            gameOver = true; player.hp = 0;
+            logMessage('You have been defeated...', '#ff0000');
+            elements.gameOverTitle.textContent = "YOU DIED";
+            elements.gameOverText.textContent = `You reached Level ${dungeonLevel}.`;
+            elements.gameOverModal.classList.remove('opacity-0', 'pointer-events-none', 'hidden');
+            elements.gameOverModal.classList.add('flex');
+        }
+
+        // --- Drawing & UI ---
+        function resizeCanvas() {
+            const container = elements.canvas.parentElement; // .game-container
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+
+            const tileSizeW = Math.floor(containerWidth / MAP_WIDTH);
+            const tileSizeH = Math.floor(containerHeight / MAP_HEIGHT);
+            TILE_SIZE = Math.min(tileSizeW, tileSizeH);
+
+            TILE_SIZE = Math.max(1, TILE_SIZE);
+
+            elements.canvas.width = MAP_WIDTH * TILE_SIZE;
+            elements.canvas.height = MAP_HEIGHT * TILE_SIZE;
+
+            if (player.hasOwnProperty('x')) {
+                preDrawMap(); // OPTIMIZATION: Redraw the map background buffer at the new size
+                draw();
+            }
+        }
+        
+        // OPTIMIZATION: Pre-draw static map elements to an off-screen canvas
+        function preDrawMap() {
+            mapCanvas = document.createElement('canvas');
+            mapCanvas.width = elements.canvas.width;
+            mapCanvas.height = elements.canvas.height;
+            const mapCtx = mapCanvas.getContext('2d');
+            
+            mapCtx.font = `${TILE_SIZE * 0.8}px 'Press Start 2P'`;
+            mapCtx.textAlign = 'center';
+            mapCtx.textBaseline = 'middle';
+            
+            const biomeWalls = currentBiome.walls;
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    if (biomeWalls.includes(map[y][x])) {
+                        mapCtx.fillText(map[y][x], x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2);
+                    }
+                }
+            }
+        }
+
+        function updateAnimations() {
+            animations = animations.filter(anim => {
+                if (anim.type === 'death') {
+                    anim.currentFrame++;
+                    return anim.currentFrame < anim.frames.length;
+                }
+                return true;
+            });
+
+            enemies.forEach(e => {
+                if (e.hpBarTimer > 0) {
+                    e.hpBarTimer--;
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+            
+            if (mapCanvas) {
+                ctx.drawImage(mapCanvas, 0, 0);
+            }
+            
+            ctx.font = `${TILE_SIZE * 0.8}px 'Press Start 2P'`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            
+            [...items, portal].forEach(actor => {
+                if(actor) ctx.fillText(actor.sprite || actor.type, actor.x * TILE_SIZE + TILE_SIZE / 2, actor.y * TILE_SIZE + TILE_SIZE / 2);
+            });
+
+            enemies.forEach(enemy => {
+                ctx.fillText(enemy.type, enemy.x * TILE_SIZE + TILE_SIZE / 2, enemy.y * TILE_SIZE + TILE_SIZE / 2);
+                if (enemy.hpBarTimer > 0 && enemy.hp > 0) {
+                    const barWidth = TILE_SIZE * 0.9;
+                    const barHeight = TILE_SIZE * 0.12;
+                    const x = enemy.x * TILE_SIZE + (TILE_SIZE - barWidth) / 2;
+                    const y = enemy.y * TILE_SIZE - barHeight * 1.5;
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(x, y, barWidth, barHeight);
+                    const hpPercent = Math.max(0, enemy.hp / enemy.maxHp);
+                    ctx.fillStyle = hpPercent > 0.6 ? '#7CFC00' : hpPercent > 0.3 ? '#FFD700' : '#DC143C';
+                    ctx.fillRect(x, y, barWidth * hpPercent, barHeight);
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, barWidth, barHeight);
+                }
+            });
+            
+            const fallAnimation = animations.find(a => a.type === 'fall');
+
+            if (player.sprite && !fallAnimation) {
+                ctx.fillText(player.sprite, player.x * TILE_SIZE + TILE_SIZE / 2, player.y * TILE_SIZE + TILE_SIZE / 2);
+            }
+
+            animations.forEach(anim => {
+                if (anim.type === 'fall') {
+                    const t = anim.progress / anim.duration;
+                    const easedT = easeOutBounce(t);
+                    const startPixelY = (anim.y - 4) * TILE_SIZE;
+                    const endPixelY = anim.y * TILE_SIZE;
+                    const currentPixelY = startPixelY + (endPixelY - startPixelY) * easedT;
+                    const rotation = (1 - easedT) * 45; 
+                    ctx.save();
+                    ctx.translate(anim.x * TILE_SIZE + TILE_SIZE / 2, currentPixelY + TILE_SIZE / 2);
+                    ctx.rotate(rotation * Math.PI / 180);
+                    ctx.globalAlpha = Math.min(1, t * 4);
+                    ctx.fillText(anim.sprite, 0, 0);
+                    ctx.restore();
+                } else if (anim.type === 'death') {
+                    const frameSprite = anim.frames[anim.currentFrame];
+                    if (frameSprite) ctx.fillText(frameSprite, anim.x * TILE_SIZE + TILE_SIZE / 2, anim.y * TILE_SIZE + TILE_SIZE / 2);
+                }
+            });
+            updateUI();
+        }
+
+        function triggerStatAnimation(element) {
+            element.classList.add('stat-increase-animation');
+            setTimeout(() => {
+                element.classList.remove('stat-increase-animation');
+            }, 600);
+        }
+
+        function updateUI() {
+            const currentStats = getStats(player);
+
+            if (player.rank > (lastPlayerStats.rank || 0)) {
+                triggerStatAnimation(elements.playerRank);
+            }
+            if (currentStats.attack > (lastPlayerStats.attack || 0)) {
+                triggerStatAnimation(elements.playerAttack);
+            }
+            if (currentStats.defense > (lastPlayerStats.defense || 0)) {
+                triggerStatAnimation(elements.playerDefense);
+            }
+            if (currentStats.speed > (lastPlayerStats.speed || 0)) {
+                triggerStatAnimation(elements.playerSpeed);
+            }
+             if (player.maxHp > (lastPlayerStats.maxHp || 0)) {
+                triggerStatAnimation(elements.playerHealthText);
+            }
+
+            elements.playerHealthBar.style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
+            elements.playerHealthText.textContent = `${Math.max(0, player.hp)}/${player.maxHp}`;
+            elements.levelCounter.textContent = `${dungeonLevel}`;
+            elements.playerSprite.textContent = player.sprite;
+            elements.playerClass.textContent = player.name;
+            
+            elements.playerAttack.textContent = `${currentStats.attack}`;
+            elements.playerDefense.textContent = `${currentStats.defense}`;
+            elements.playerSpeed.textContent = `${currentStats.speed}`;
+            elements.playerRank.textContent = player.rank;
+            elements.playerXpBar.style.width = `${(player.xp / player.xpToNextLevel) * 100}%`;
+            elements.playerXpText.textContent = `${player.xp}/${player.xpToNextLevel}`;
+
+            lastPlayerStats = {
+                rank: player.rank,
+                attack: currentStats.attack,
+                defense: currentStats.defense,
+                speed: currentStats.speed,
+                maxHp: player.maxHp
+            };
+        }
+
+        function logMessage(message, color = '#f0f0f0') {
+            const p = document.createElement('p');
+            p.textContent = `> ${message}`;
+            p.style.color = color;
+            elements.messageLog.appendChild(p);
+            elements.messageLog.scrollTop = elements.messageLog.scrollHeight;
+        }
+
+        // --- Helper Functions ---
+        function easeOutBounce(t) {
+            if (t < (1 / 2.75)) {
+                return 7.5625 * t * t;
+            } else if (t < (2 / 2.75)) {
+                return 7.5625 * (t -= (1.5 / 2.75)) * t + 0.75;
+            } else if (t < (2.5 / 2.75)) {
+                return 7.5625 * (t -= (2.25 / 2.75)) * t + 0.9375;
+            } else {
+                return 7.5625 * (t -= (2.625 / 2.75)) * t + 0.984375;
+            }
+        }
+
+        function startIntroAnimation() {
+            isIntroAnimating = true;
+            
+            const fallAnimation = {
+                type: 'fall',
+                sprite: player.sprite,
+                x: player.x,
+                y: player.y,
+                progress: 0,
+                duration: 60
+            };
+            animations.push(fallAnimation);
+
+            let startTime = null;
+            function animationLoop(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                
+                fallAnimation.progress = Math.min(fallAnimation.duration, Math.floor(elapsed / (1000 / 60)));
+
+                draw(); 
+
+                if (fallAnimation.progress < fallAnimation.duration) {
+                    requestAnimationFrame(animationLoop);
+                } else {
+                    isIntroAnimating = false;
+                    animations = animations.filter(a => a.type !== 'fall');
+                    player.ap = ACTION_COST;
+                    isPlayerTurn = true;
+                    draw(); 
+                }
+            }
+            requestAnimationFrame(animationLoop);
+        }
+
+        // --- Initialization ---
+        function populateCharacterSelection() {
+            CHARACTERS.sort((a,b) => a.id - b.id).forEach(char => {
+                const card = document.createElement('div');
+                card.className = 'character-card bg-gray-800 p-2 rounded-lg cursor-pointer flex flex-col justify-center items-center h-full text-center';
+                card.innerHTML = `
+                    <div class="text-4xl">${char.sprite}</div>
+                    <div class="font-bold text-yellow-400 mt-1 text-sm">${char.name}</div>
+                    <div class="text-gray-400 mt-2 text-xs leading-tight">
+                        <span>HP:${char.hp}</span> <span>ATK:${char.attack}</span><br>
+                        <span>DEF:${char.defense}</span> <span>SPD:${char.speed}</span>
+                    </div>
+                `;
+                card.onclick = () => initGame(char.id);
+                elements.characterGrid.appendChild(card);
+            });
+
+            const randomCard = document.createElement('div');
+            randomCard.className = 'character-card bg-gray-800 p-2 rounded-lg cursor-pointer flex flex-col justify-center items-center h-full text-center';
+            randomCard.innerHTML = `
+                <div class="text-4xl">❓</div>
+                <div class="font-bold text-yellow-400 mt-1 text-sm">Random</div>
+                 <div class="text-gray-400 mt-2 text-xs leading-tight">
+                    &nbsp;<br>&nbsp;
+                </div>
+            `;
+            randomCard.onclick = () => {
+                const randomChar = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+                initGame(randomChar.id);
+            };
+            elements.characterGrid.appendChild(randomCard);
+        }
+
+        function initMobileControls() {
+            const handleTouchMove = (dx, dy) => {
+                if (!isPlayerTurn || gameOver || isIntroAnimating || inputCooldown > 0) return;
+                
+                // Temporarily store turn state
+                const wasPlayerTurn = isPlayerTurn;
+                movePlayer(dx, dy);
+
+                // If a move was successfully made, movePlayer will set isPlayerTurn to false.
+                // We check if the state has changed to apply the cooldown.
+                if (wasPlayerTurn && !isPlayerTurn) {
+                    inputCooldown = INPUT_COOLDOWN_FRAMES; 
+                }
+            }
+
+            document.getElementById('touch-up').addEventListener('touchstart', e => { e.preventDefault(); handleTouchMove(0, -1); }, { passive: false });
+            document.getElementById('touch-down').addEventListener('touchstart', e => { e.preventDefault(); handleTouchMove(0, 1); }, { passive: false });
+            document.getElementById('touch-left').addEventListener('touchstart', e => { e.preventDefault(); handleTouchMove(-1, 0); }, { passive: false });
+            document.getElementById('touch-right').addEventListener('touchstart', e => { e.preventDefault(); handleTouchMove(1, 0); }, { passive: false });
+
+            const touchControls = document.getElementById('touch-controls');
+            const moveControlsButton = document.getElementById('move-controls');
+
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            const startDrag = (clientX, clientY) => {
+                isDragging = true;
+                touchControls.style.transition = 'none'; // Disable transition while dragging
+                const rect = touchControls.getBoundingClientRect();
+                offsetX = clientX - rect.left;
+                offsetY = clientY - rect.top;
+            };
+
+            const drag = (clientX, clientY) => {
+                if (!isDragging) return;
+                let newLeft = clientX - offsetX;
+                let newTop = clientY - offsetY;
+                const rect = touchControls.getBoundingClientRect();
+                newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - rect.width));
+                newTop = Math.max(0, Math.min(newTop, window.innerHeight - rect.height));
+                touchControls.style.left = `${newLeft}px`;
+                touchControls.style.top = `${newTop}px`;
+                touchControls.style.bottom = 'auto';
+                touchControls.style.transform = 'none';
+            };
+
+            const stopDrag = () => {
+                if(isDragging) {
+                    isDragging = false;
+                }
+            };
+
+            moveControlsButton.addEventListener('touchstart', e => {
+                e.preventDefault();
+                startDrag(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: false });
+            
+            window.addEventListener('touchmove', e => {
+                if (isDragging) {
+                    drag(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: false });
+            window.addEventListener('touchend', stopDrag);
+            
+            let touchStartX = 0, touchStartY = 0;
+            elements.canvas.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+            elements.canvas.addEventListener('touchend', e => {
+                if (isDragging) return; // Don't swipe if dragging the controls
+                const dx = e.changedTouches[0].screenX - touchStartX;
+                const dy = e.changedTouches[0].screenY - touchStartY;
+                const swipeThreshold = 40;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (Math.abs(dx) > swipeThreshold) handleTouchMove(dx > 0 ? 1 : -1, 0);
+                } else {
+                    if (Math.abs(dy) > swipeThreshold) handleTouchMove(0, dy > 0 ? 1 : -1);
+                }
+            }, { passive: true });
+        }
+        
+        function resetGame() {
+            elements.gameUI.classList.add('hidden');
+            elements.gameUI.classList.remove('flex');
+            elements.gameOverModal.classList.add('opacity-0', 'pointer-events-none', 'hidden');
+            elements.gameOverModal.classList.remove('flex');
+            gameOver = false; dungeonLevel = 1; turnCount = 0;
+            animations = []; player = {}; enemies = []; items = []; portal = {}; map = [];
+            isPlayerTurn = true;
+            CHARACTERS = JSON.parse(JSON.stringify(ORIGINAL_CHARACTERS));
+            elements.characterGrid.innerHTML = '';
+            populateCharacterSelection();
+            elements.characterSelectionModal.classList.remove('opacity-0', 'pointer-events-none', 'hidden');
+            elements.characterSelectionModal.classList.add('flex');
+        }
+
+        function initGame(charId) {
+            const charData = CHARACTERS.find(c => c.id === charId);
+            player = {
+                ...charData,
+                maxHp: charData.hp,
+                baseAttack: charData.attack,
+                baseDefense: charData.defense,
+                rank: 1, xp: 0, xpToNextLevel: 100, ap: ACTION_COST
+            };
+
+            const startingStats = getStats(player);
+            lastPlayerStats = {
+                rank: player.rank,
+                attack: startingStats.attack,
+                defense: startingStats.defense,
+                speed: startingStats.speed,
+                maxHp: player.maxHp
+            };
+
+            gameOver = false; dungeonLevel = 1; turnCount = 0; isPlayerTurn = true;
+            animations = [];
+            currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
+            elements.messageLog.innerHTML = '';
+            elements.characterSelectionModal.classList.add('opacity-0', 'pointer-events-none');
+            elements.gameUI.classList.remove('hidden');
+            elements.gameUI.classList.add('flex');
+            generateDungeon();
+            resizeCanvas();
+            logMessage(`You begin your adventure in ${currentBiome.name}...`, '#aaa');
+            startIntroAnimation();
+        }
+
+        window.onload = () => {
+             populateCharacterSelection();
+             initMobileControls();
+             mainTick(); 
+             window.addEventListener('resize', () => {
+                resizeCanvas();
+             });
+        };
+    </script>
+</body>
+</html>
+
