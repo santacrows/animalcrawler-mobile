@@ -999,12 +999,11 @@
         }
 
         function initGame(charId) {
-            try {
-                if (screen.orientation && screen.orientation.lock) {
-                    screen.orientation.lock('portrait');
-                }
-            } catch (error) {
-                console.warn("Screen orientation lock not supported.", error);
+            // Screen orientation lock can fail in sandboxed environments.
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('portrait').catch(error => {
+                    console.warn("Screen orientation lock not supported or failed.", error);
+                });
             }
 
             const charData = CHARACTERS.find(c => c.id === charId);
@@ -1029,7 +1028,7 @@
             animations = [];
             playerPath = [];
             currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
-            elements.messageLog.innerHTML = '';
+            
             elements.characterSelectionModal.classList.add('opacity-0', 'pointer-events-none');
             elements.gameUI.classList.remove('hidden');
             elements.gameUI.classList.add('flex');
