@@ -66,9 +66,6 @@
         .stat-increase-animation {
             animation: stat-flash 0.6s ease-in-out;
         }
-        #touch-controls {
-            position: fixed; /* Use fixed positioning for dragging */
-        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center h-screen p-2">
@@ -129,14 +126,6 @@
             <p id="gameOverText" class="text-xl mb-6"></p>
             <button onclick="resetGame()" class="px-6 py-3 bg-yellow-500 text-black rounded-lg text-lg hover:bg-yellow-400 transition-colors">Play Again</button>
         </div>
-    </div>
-
-    <div id="touch-controls" class="grid grid-cols-3 grid-rows-3 w-48 h-48 opacity-75" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);">
-        <button id="touch-up" class="col-start-2 row-start-1 bg-gray-700 border-2 border-gray-500 rounded-md text-2xl active:bg-gray-500">▲</button>
-        <button id="touch-left" class="col-start-1 row-start-2 bg-gray-700 border-2 border-gray-500 rounded-md text-2xl active:bg-gray-500">◀</button>
-        <button id="move-controls" class="col-start-2 row-start-2 bg-gray-600 border-2 border-gray-500 rounded-full text-xl active:bg-gray-500 cursor-grab active:cursor-grabbing">✥</button>
-        <button id="touch-right" class="col-start-3 row-start-2 bg-gray-700 border-2 border-gray-500 rounded-md text-2xl active:bg-gray-500">▶</button>
-        <button id="touch-down" class="col-start-2 row-start-3 bg-gray-700 border-2 border-gray-500 rounded-md text-2xl active:bg-gray-500">▼</button>
     </div>
 
     <script>
@@ -251,8 +240,7 @@
         let lastPlayerStats = {};
         let isIntroAnimating = false;
         let mapCanvas; // Off-screen canvas for rendering the static map background
-        let inputCooldown = 0;
-        const INPUT_COOLDOWN_FRAMES = 8; // A cooldown for touch movement
+        let playerPath = [];
 
         // --- Game Logic ---
         function createActor(type, x, y) {
@@ -498,23 +486,26 @@
         }
         
         function mainTick() {
-            // This is our main loop, running on every animation frame.
             requestAnimationFrame(mainTick);
 
-            // Don't run game logic if modals are up, game is over, or intro is playing
             if (elements.gameUI.classList.contains('hidden') || gameOver || isIntroAnimating) {
                 return;
             }
 
-            // Decrement the input cooldown timer each frame
-            if (inputCooldown > 0) {
-                inputCooldown--;
+            if (isPlayerTurn && playerPath.length > 0) {
+                const nextStep = playerPath.shift();
+                const dx = nextStep.x - player.x;
+                const dy = nextStep.y - player.y;
+
+                const targetEnemy = enemies.find(e => e.x === player.x + dx && e.y === player.y + dy);
+                if (targetEnemy) {
+                    playerPath = []; // Stop moving
+                }
+                
+                movePlayer(dx, dy);
             }
             
             if (!isPlayerTurn) {
-                // It's the AI's turn.
-                // This loop runs as many "ticks" as needed in a single frame
-                // until the player can act again. This makes AI turns feel instant.
                 while (!isPlayerTurn && !gameOver) {
                     player.ap += player.speed;
                     enemies.forEach(e => {
@@ -539,7 +530,6 @@
                 }
             }
 
-            // Always update animations and redraw the screen after the logic for the frame is done.
             updateAnimations();
             draw();
         }
@@ -661,9 +651,9 @@
             currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
             logMessage(`You fall through the hole into ${currentBiome.name}...`, '#ffd700');
             generateDungeon();
-            preDrawMap(); // OPTIMIZATION: Redraw the map background canvas
+            preDrawMap(); 
             player.ap = 0; 
-            isPlayerTurn = false; // Prevent input during animation
+            isPlayerTurn = false;
             startIntroAnimation();
         }
 
@@ -676,9 +666,8 @@
             elements.gameOverModal.classList.add('flex');
         }
 
-        // --- Drawing & UI ---
         function resizeCanvas() {
-            const container = elements.canvas.parentElement; // .game-container
+            const container = elements.canvas.parentElement; 
             const containerWidth = container.clientWidth;
             const containerHeight = container.clientHeight;
 
@@ -692,12 +681,11 @@
             elements.canvas.height = MAP_HEIGHT * TILE_SIZE;
 
             if (player.hasOwnProperty('x')) {
-                preDrawMap(); // OPTIMIZATION: Redraw the map background buffer at the new size
+                preDrawMap(); 
                 draw();
             }
         }
         
-        // OPTIMIZATION: Pre-draw static map elements to an off-screen canvas
         function preDrawMap() {
             mapCanvas = document.createElement('canvas');
             mapCanvas.width = elements.canvas.width;
@@ -850,7 +838,6 @@
             elements.messageLog.scrollTop = elements.messageLog.scrollHeight;
         }
 
-        // --- Helper Functions ---
         function easeOutBounce(t) {
             if (t < (1 / 2.75)) {
                 return 7.5625 * t * t;
@@ -898,7 +885,6 @@
             requestAnimationFrame(animationLoop);
         }
 
-        // --- Initialization ---
         function populateCharacterSelection() {
             CHARACTERS.sort((a,b) => a.id - b.id).forEach(char => {
                 const card = document.createElement('div');
@@ -930,88 +916,85 @@
             };
             elements.characterGrid.appendChild(randomCard);
         }
-
-        function initMobileControls() {
-            const handleTouchMove = (dx, dy) => {
-                if (!isPlayerTurn || gameOver || isIntroAnimating || inputCooldown > 0) return;
+        
+        function findPath(start, end) {
+            const openSet = [start];
+            const cameFrom = new Map();
+            const gScore = new Map();
+            gScore.set(`${start.x},${start.y}`, 0);
+            const fScore = new Map();
+            fScore.set(`${start.x},${start.y}`, Math.abs(start.x - end.x) + Math.abs(start.y - end.y));
+            
+            while(openSet.length > 0) {
+                let current = openSet.sort((a, b) => (fScore.get(`${a.x},${a.y}`) || Infinity) - (fScore.get(`${b.x},${b.y}`) || Infinity))[0];
                 
-                // Temporarily store turn state
-                const wasPlayerTurn = isPlayerTurn;
-                movePlayer(dx, dy);
+                if (current.x === end.x && current.y === end.y) {
+                    const path = [];
+                    while(current) {
+                        path.push(current);
+                        current = cameFrom.get(`${current.x},${current.y}`);
+                    }
+                    return path.reverse();
+                }
 
-                // If a move was successfully made, movePlayer will set isPlayerTurn to false.
-                // We check if the state has changed to apply the cooldown.
-                if (wasPlayerTurn && !isPlayerTurn) {
-                    inputCooldown = INPUT_COOLDOWN_FRAMES; 
+                openSet.splice(openSet.indexOf(current), 1);
+                
+                for(let dx = -1; dx <= 1; dx++) {
+                    for(let dy = -1; dy <=1; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        if (dx !== 0 && dy !== 0) continue; 
+                        
+                        const neighbor = {x: current.x + dx, y: current.y + dy};
+                        
+                        if (neighbor.x < 0 || neighbor.x >= MAP_WIDTH || neighbor.y < 0 || neighbor.y >= MAP_HEIGHT) continue;
+                        if (isWall(neighbor.x, neighbor.y)) continue;
+                        if (isOccupied(neighbor.x, neighbor.y, true) && (neighbor.x !== end.x || neighbor.y !== end.y)) continue;
+                        
+                        const tentativeGScore = (gScore.get(`${current.x},${current.y}`) || 0) + 1;
+                        if(tentativeGScore < (gScore.get(`${neighbor.x},${neighbor.y}`) || Infinity)) {
+                             cameFrom.set(`${neighbor.x},${neighbor.y}`, current);
+                             gScore.set(`${neighbor.x},${neighbor.y}`, tentativeGScore);
+                             fScore.set(`${neighbor.x},${neighbor.y}`, tentativeGScore + Math.abs(neighbor.x - end.x) + Math.abs(neighbor.y - end.y));
+                             if(!openSet.some(node => node.x === neighbor.x && node.y === neighbor.y)) {
+                                 openSet.push(neighbor);
+                             }
+                        }
+                    }
                 }
             }
-
-            document.getElementById('touch-up').addEventListener('touchstart', e => { e.preventDefault(); handleTouchMove(0, -1); }, { passive: false });
-            document.getElementById('touch-down').addEventListener('touchstart', e => { e.preventDefault(); handleTouchMove(0, 1); }, { passive: false });
-            document.getElementById('touch-left').addEventListener('touchstart', e => { e.preventDefault(); handleTouchMove(-1, 0); }, { passive: false });
-            document.getElementById('touch-right').addEventListener('touchstart', e => { e.preventDefault(); handleTouchMove(1, 0); }, { passive: false });
-
-            const touchControls = document.getElementById('touch-controls');
-            const moveControlsButton = document.getElementById('move-controls');
-
-            let isDragging = false;
-            let offsetX, offsetY;
-
-            const startDrag = (clientX, clientY) => {
-                isDragging = true;
-                touchControls.style.transition = 'none'; // Disable transition while dragging
-                const rect = touchControls.getBoundingClientRect();
-                offsetX = clientX - rect.left;
-                offsetY = clientY - rect.top;
-            };
-
-            const drag = (clientX, clientY) => {
-                if (!isDragging) return;
-                let newLeft = clientX - offsetX;
-                let newTop = clientY - offsetY;
-                const rect = touchControls.getBoundingClientRect();
-                newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - rect.width));
-                newTop = Math.max(0, Math.min(newTop, window.innerHeight - rect.height));
-                touchControls.style.left = `${newLeft}px`;
-                touchControls.style.top = `${newTop}px`;
-                touchControls.style.bottom = 'auto';
-                touchControls.style.transform = 'none';
-            };
-
-            const stopDrag = () => {
-                if(isDragging) {
-                    isDragging = false;
+            return [];
+        }
+        
+        function initClickToMove() {
+            elements.canvas.addEventListener('mousedown', (e) => {
+                if (!isPlayerTurn || gameOver || isIntroAnimating) return;
+                
+                const rect = elements.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const tileX = Math.floor(x / TILE_SIZE);
+                const tileY = Math.floor(y / TILE_SIZE);
+                
+                if (tileX < 0 || tileX >= MAP_WIDTH || tileY < 0 || tileY >= MAP_HEIGHT) return;
+                
+                const targetEnemy = enemies.find(en => en.x === tileX && en.y === tileY);
+                
+                if (targetEnemy) {
+                    const path = findPath({x: player.x, y: player.y}, {x: tileX, y: tileY});
+                    if (path.length > 2) { 
+                        path.pop(); 
+                        playerPath = path.slice(1);
+                    } else if (path.length === 2) {
+                        movePlayer(path[1].x - player.x, path[1].y - player.y);
+                    }
+                } else if (!isWall(tileX, tileY)) {
+                    const path = findPath({x: player.x, y: player.y}, {x: tileX, y: tileY});
+                    if (path.length > 1) {
+                        playerPath = path.slice(1);
+                    }
                 }
-            };
-
-            moveControlsButton.addEventListener('touchstart', e => {
-                e.preventDefault();
-                startDrag(e.touches[0].clientX, e.touches[0].clientY);
-            }, { passive: false });
-            
-            window.addEventListener('touchmove', e => {
-                if (isDragging) {
-                    drag(e.touches[0].clientX, e.touches[0].clientY);
-                }
-            }, { passive: false });
-            window.addEventListener('touchend', stopDrag);
-            
-            let touchStartX = 0, touchStartY = 0;
-            elements.canvas.addEventListener('touchstart', e => {
-                touchStartX = e.changedTouches[0].screenX;
-                touchStartY = e.changedTouches[0].screenY;
-            }, { passive: true });
-            elements.canvas.addEventListener('touchend', e => {
-                if (isDragging) return; // Don't swipe if dragging the controls
-                const dx = e.changedTouches[0].screenX - touchStartX;
-                const dy = e.changedTouches[0].screenY - touchStartY;
-                const swipeThreshold = 40;
-                if (Math.abs(dx) > Math.abs(dy)) {
-                    if (Math.abs(dx) > swipeThreshold) handleTouchMove(dx > 0 ? 1 : -1, 0);
-                } else {
-                    if (Math.abs(dy) > swipeThreshold) handleTouchMove(0, dy > 0 ? 1 : -1);
-                }
-            }, { passive: true });
+            });
         }
         
         function resetGame() {
@@ -1030,7 +1013,6 @@
         }
 
         function initGame(charId) {
-            // Screen orientation lock
             try {
                 if (screen.orientation && screen.orientation.lock) {
                     screen.orientation.lock('portrait');
@@ -1072,7 +1054,7 @@
 
         window.onload = () => {
              populateCharacterSelection();
-             initMobileControls();
+             initClickToMove();
              mainTick(); 
              window.addEventListener('resize', () => {
                 resizeCanvas();
