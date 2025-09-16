@@ -253,6 +253,15 @@
         let mapCanvas; // Off-screen canvas for rendering the static map background
         let inputCooldown = 0;
         const INPUT_COOLDOWN_FRAMES = 8; // A cooldown for touch movement
+        
+        // State for press-and-hold controls, managed by mainTick
+        let touchState = {
+            isHolding: false,
+            direction: { dx: 0, dy: 0 },
+            startTime: 0,
+            lastMoveTime: 0,
+        };
+
 
         // --- Game Logic ---
         function createActor(type, x, y) {
@@ -505,6 +514,32 @@
             if (elements.gameUI.classList.contains('hidden') || gameOver || isIntroAnimating) {
                 return;
             }
+            
+            // Handle Mobile Input based on state
+            if (isPlayerTurn && touchState.isHolding) {
+                const now = performance.now();
+                const timeSinceStart = now - touchState.startTime;
+                const timeSinceLastMove = now - touchState.lastMoveTime;
+
+                let shouldMove = false;
+
+                // Condition for the very first move on a new press
+                if (touchState.lastMoveTime === 0) {
+                    shouldMove = true;
+                }
+                // Condition for subsequent moves after the initial delay (250ms) and repeat rate (100ms)
+                else if (timeSinceStart > 250 && timeSinceLastMove > 100) {
+                     shouldMove = true;
+                }
+
+                if (shouldMove) {
+                    // Update the last move time immediately to prevent getting stuck in a loop
+                    // if the player tries to move into a wall.
+                    touchState.lastMoveTime = now;
+                    movePlayer(touchState.direction.dx, touchState.direction.dy);
+                }
+            }
+
 
             // Decrement the input cooldown timer each frame
             if (inputCooldown > 0) {
@@ -755,4 +790,353 @@
                     const barHeight = TILE_SIZE * 0.12;
                     const x = enemy.x * TILE_SIZE + (TILE_SIZE - barWidth) / 2;
                     const y = enemy.y * TILE_SIZE - barHeight * 1.5;
-                    ctx
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(x, y, barWidth, barHeight);
+                    const hpPercent = Math.max(0, enemy.hp / enemy.maxHp);
+                    ctx.fillStyle = hpPercent > 0.6 ? '#7CFC00' : hpPercent > 0.3 ? '#FFD700' : '#DC143C';
+                    ctx.fillRect(x, y, barWidth * hpPercent, barHeight);
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, barWidth, barHeight);
+                }
+            });
+            
+            const fallAnimation = animations.find(a => a.type === 'fall');
+
+            if (player.sprite && !fallAnimation) {
+                ctx.fillText(player.sprite, player.x * TILE_SIZE + TILE_SIZE / 2, player.y * TILE_SIZE + TILE_SIZE / 2);
+            }
+
+            animations.forEach(anim => {
+                if (anim.type === 'fall') {
+                    const t = anim.progress / anim.duration;
+                    const easedT = easeOutBounce(t);
+                    const startPixelY = (anim.y - 4) * TILE_SIZE;
+                    const endPixelY = anim.y * TILE_SIZE;
+                    const currentPixelY = startPixelY + (endPixelY - startPixelY) * easedT;
+                    const rotation = (1 - easedT) * 45; 
+                    ctx.save();
+                    ctx.translate(anim.x * TILE_SIZE + TILE_SIZE / 2, currentPixelY + TILE_SIZE / 2);
+                    ctx.rotate(rotation * Math.PI / 180);
+                    ctx.globalAlpha = Math.min(1, t * 4);
+                    ctx.fillText(anim.sprite, 0, 0);
+                    ctx.restore();
+                } else if (anim.type === 'death') {
+                    const frameSprite = anim.frames[anim.currentFrame];
+                    if (frameSprite) ctx.fillText(frameSprite, anim.x * TILE_SIZE + TILE_SIZE / 2, anim.y * TILE_SIZE + TILE_SIZE / 2);
+                }
+            });
+            updateUI();
+        }
+
+        function triggerStatAnimation(element) {
+            element.classList.add('stat-increase-animation');
+            setTimeout(() => {
+                element.classList.remove('stat-increase-animation');
+            }, 600);
+        }
+
+        function updateUI() {
+            const currentStats = getStats(player);
+
+            if (player.rank > (lastPlayerStats.rank || 0)) {
+                triggerStatAnimation(elements.playerRank);
+            }
+            if (currentStats.attack > (lastPlayerStats.attack || 0)) {
+                triggerStatAnimation(elements.playerAttack);
+            }
+            if (currentStats.defense > (lastPlayerStats.defense || 0)) {
+                triggerStatAnimation(elements.playerDefense);
+            }
+            if (currentStats.speed > (lastPlayerStats.speed || 0)) {
+                triggerStatAnimation(elements.playerSpeed);
+            }
+             if (player.maxHp > (lastPlayerStats.maxHp || 0)) {
+                triggerStatAnimation(elements.playerHealthText);
+            }
+
+            elements.playerHealthBar.style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
+            elements.playerHealthText.textContent = `${Math.max(0, player.hp)}/${player.maxHp}`;
+            elements.levelCounter.textContent = `${dungeonLevel}`;
+            elements.playerSprite.textContent = player.sprite;
+            elements.playerClass.textContent = player.name;
+            
+            elements.playerAttack.textContent = `${currentStats.attack}`;
+            elements.playerDefense.textContent = `${currentStats.defense}`;
+            elements.playerSpeed.textContent = `${currentStats.speed}`;
+            elements.playerRank.textContent = player.rank;
+            elements.playerXpBar.style.width = `${(player.xp / player.xpToNextLevel) * 100}%`;
+            elements.playerXpText.textContent = `${player.xp}/${player.xpToNextLevel}`;
+
+            lastPlayerStats = {
+                rank: player.rank,
+                attack: currentStats.attack,
+                defense: currentStats.defense,
+                speed: currentStats.speed,
+                maxHp: player.maxHp
+            };
+        }
+
+        function logMessage(message, color = '#f0f0f0') {
+            const p = document.createElement('p');
+            p.textContent = `> ${message}`;
+            p.style.color = color;
+            elements.messageLog.appendChild(p);
+            elements.messageLog.scrollTop = elements.messageLog.scrollHeight;
+        }
+
+        // --- Helper Functions ---
+        function easeOutBounce(t) {
+            if (t < (1 / 2.75)) {
+                return 7.5625 * t * t;
+            } else if (t < (2 / 2.75)) {
+                return 7.5625 * (t -= (1.5 / 2.75)) * t + 0.75;
+            } else if (t < (2.5 / 2.75)) {
+                return 7.5625 * (t -= (2.25 / 2.75)) * t + 0.9375;
+            } else {
+                return 7.5625 * (t -= (2.625 / 2.75)) * t + 0.984375;
+            }
+        }
+
+        function startIntroAnimation() {
+            isIntroAnimating = true;
+            
+            const fallAnimation = {
+                type: 'fall',
+                sprite: player.sprite,
+                x: player.x,
+                y: player.y,
+                progress: 0,
+                duration: 60
+            };
+            animations.push(fallAnimation);
+
+            let startTime = null;
+            function animationLoop(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                
+                fallAnimation.progress = Math.min(fallAnimation.duration, Math.floor(elapsed / (1000 / 60)));
+
+                draw(); 
+
+                if (fallAnimation.progress < fallAnimation.duration) {
+                    requestAnimationFrame(animationLoop);
+                } else {
+                    isIntroAnimating = false;
+                    animations = animations.filter(a => a.type !== 'fall');
+                    player.ap = ACTION_COST;
+                    isPlayerTurn = true;
+                    draw(); 
+                }
+            }
+            requestAnimationFrame(animationLoop);
+        }
+
+        // --- Initialization ---
+        function populateCharacterSelection() {
+            CHARACTERS.sort((a,b) => a.id - b.id).forEach(char => {
+                const card = document.createElement('div');
+                card.className = 'character-card bg-gray-800 p-2 rounded-lg cursor-pointer flex flex-col justify-center items-center h-full text-center';
+                card.innerHTML = `
+                    <div class="text-4xl">${char.sprite}</div>
+                    <div class="font-bold text-yellow-400 mt-1 text-sm">${char.name}</div>
+                    <div class="text-gray-400 mt-2 text-xs leading-tight">
+                        <span>HP:${char.hp}</span> <span>ATK:${char.attack}</span><br>
+                        <span>DEF:${char.defense}</span> <span>SPD:${char.speed}</span>
+                    </div>
+                `;
+                card.onclick = () => initGame(char.id);
+                elements.characterGrid.appendChild(card);
+            });
+
+            const randomCard = document.createElement('div');
+            randomCard.className = 'character-card bg-gray-800 p-2 rounded-lg cursor-pointer flex flex-col justify-center items-center h-full text-center';
+            randomCard.innerHTML = `
+                <div class="text-4xl">❓</div>
+                <div class="font-bold text-yellow-400 mt-1 text-sm">Random</div>
+                 <div class="text-gray-400 mt-2 text-xs leading-tight">
+                    &nbsp;<br>&nbsp;
+                </div>
+            `;
+            randomCard.onclick = () => {
+                const randomChar = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+                initGame(randomChar.id);
+            };
+            elements.characterGrid.appendChild(randomCard);
+        }
+
+        function initMobileControls() {
+            // This function sets up the state for press-and-hold, which is handled in mainTick.
+            const startPress = (dx, dy) => {
+                touchState.isHolding = true;
+                touchState.direction = { dx, dy };
+                touchState.startTime = performance.now();
+                touchState.lastMoveTime = 0; // Reset to 0 to indicate a new press.
+            };
+
+            const stopPress = () => {
+                touchState.isHolding = false;
+            };
+
+            // Define the movement buttons and their corresponding directions.
+            const moveButtons = {
+                'touch-up': { dx: 0, dy: -1 },
+                'touch-down': { dx: 0, dy: 1 },
+                'touch-left': { dx: -1, dy: 0 },
+                'touch-right': { dx: 1, dy: 0 }
+            };
+
+            // Attach the start and stop press handlers to each button.
+            for (const id in moveButtons) {
+                const button = document.getElementById(id);
+                const { dx, dy } = moveButtons[id];
+                
+                button.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startPress(dx, dy);
+                }, { passive: false });
+
+                button.addEventListener('touchend', stopPress, { passive: false });
+                button.addEventListener('touchcancel', stopPress, { passive: false });
+            }
+
+
+            // --- Logic for dragging the control overlay ---
+            const touchControls = document.getElementById('touch-controls');
+            const moveControlsButton = document.getElementById('move-controls');
+
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            const startDrag = (clientX, clientY) => {
+                isDragging = true;
+                touchControls.style.transition = 'none';
+                const rect = touchControls.getBoundingClientRect();
+                offsetX = clientX - rect.left;
+                offsetY = clientY - rect.top;
+            };
+
+            const drag = (clientX, clientY) => {
+                if (!isDragging) return;
+                let newLeft = clientX - offsetX;
+                let newTop = clientY - offsetY;
+                const rect = touchControls.getBoundingClientRect();
+                newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - rect.width));
+                newTop = Math.max(0, Math.min(newTop, window.innerHeight - rect.height));
+                touchControls.style.left = `${newLeft}px`;
+                touchControls.style.top = `${newTop}px`;
+                touchControls.style.bottom = 'auto';
+                touchControls.style.transform = 'none';
+            };
+
+            const stopDrag = () => {
+                if (isDragging) {
+                    isDragging = false;
+                }
+            };
+
+            moveControlsButton.addEventListener('touchstart', e => {
+                e.preventDefault();
+                startDrag(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: false });
+            
+            window.addEventListener('touchmove', e => {
+                if (isDragging) {
+                    drag(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: false });
+            window.addEventListener('touchend', stopDrag);
+            
+            // --- Logic for swipe-to-move on the canvas ---
+            let touchStartX = 0, touchStartY = 0;
+            elements.canvas.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+            
+            elements.canvas.addEventListener('touchend', e => {
+                if (isDragging) return; // Don't swipe if dragging the controls
+                const dx = e.changedTouches[0].screenX - touchStartX;
+                const dy = e.changedTouches[0].screenY - touchStartY;
+                const swipeThreshold = 40;
+                const wasPlayerTurn = isPlayerTurn;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (Math.abs(dx) > swipeThreshold) movePlayer(dx > 0 ? 1 : -1, 0);
+                } else {
+                    if (Math.abs(dy) > swipeThreshold) movePlayer(0, dy > 0 ? 1 : -1);
+                }
+                 if (wasPlayerTurn && !isPlayerTurn) {
+                    inputCooldown = INPUT_COOLDOWN_FRAMES; 
+                }
+            }, { passive: true });
+        }
+        
+        function resetGame() {
+            elements.gameUI.classList.add('hidden');
+            elements.gameUI.classList.remove('flex');
+            elements.gameOverModal.classList.add('opacity-0', 'pointer-events-none', 'hidden');
+            elements.gameOverModal.classList.remove('flex');
+            gameOver = false; dungeonLevel = 1; turnCount = 0;
+            animations = []; player = {}; enemies = []; items = []; portal = {}; map = [];
+            isPlayerTurn = true;
+            CHARACTERS = JSON.parse(JSON.stringify(ORIGINAL_CHARACTERS));
+            elements.characterGrid.innerHTML = '';
+            populateCharacterSelection();
+            elements.characterSelectionModal.classList.remove('opacity-0', 'pointer-events-none', 'hidden');
+            elements.characterSelectionModal.classList.add('flex');
+        }
+
+        function initGame(charId) {
+            // Screen orientation lock - Commented out due to security errors in some environments
+            /* try {
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('portrait');
+                }
+            } catch (error) {
+                console.warn("Screen orientation lock not supported.", error);
+            } */
+
+            const charData = CHARACTERS.find(c => c.id === charId);
+            player = {
+                ...charData,
+                maxHp: charData.hp,
+                baseAttack: charData.attack,
+                baseDefense: charData.defense,
+                rank: 1, xp: 0, xpToNextLevel: 100, ap: ACTION_COST
+            };
+
+            const startingStats = getStats(player);
+            lastPlayerStats = {
+                rank: player.rank,
+                attack: startingStats.attack,
+                defense: startingStats.defense,
+                speed: startingStats.speed,
+                maxHp: player.maxHp
+            };
+
+            gameOver = false; dungeonLevel = 1; turnCount = 0; isPlayerTurn = true;
+            animations = [];
+            currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
+            elements.messageLog.innerHTML = '';
+            elements.characterSelectionModal.classList.add('opacity-0', 'pointer-events-none');
+            elements.gameUI.classList.remove('hidden');
+            elements.gameUI.classList.add('flex');
+            generateDungeon();
+            resizeCanvas();
+            logMessage(`You begin your adventure in ${currentBiome.name}...`, '#aaa');
+            startIntroAnimation();
+        }
+
+        window.onload = () => {
+             populateCharacterSelection();
+             initMobileControls();
+             mainTick(); 
+             window.addEventListener('resize', () => {
+                resizeCanvas();
+             });
+        };
+    </script>
+</body>
+</html>
+
