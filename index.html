@@ -527,8 +527,8 @@
                 if (touchState.lastMoveTime === 0) {
                     shouldMove = true;
                 }
-                // Condition for subsequent moves after the initial delay (250ms) and repeat rate (100ms)
-                else if (timeSinceStart > 250 && timeSinceLastMove > 20) {
+                // Condition for subsequent moves after the initial delay (150ms) and repeat rate (50ms)
+                else if (timeSinceStart > 150 && timeSinceLastMove > 50) {
                      shouldMove = true;
                 }
 
