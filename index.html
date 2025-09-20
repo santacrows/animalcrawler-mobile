@@ -173,6 +173,7 @@
         const SPRITES = {
             WALLS: ['🌲', '🌳', '🌴', '🌿',],
             FLOOR: ' ',
+            // Common Enemies
             RUNNER: '🏃',
             PERSON: '🧍',
             CARTWHEELER: '🤸',
@@ -182,33 +183,53 @@
             PARTNERS: '🧑‍🤝‍🧑',
             GOLFER: '🏌️',
             KNEELER: '🧎‍',
-	    BALLER: '⛹️',
-	    FENCER: '🤺',
+	        BALLER: '⛹️',
+	        FENCER: '🤺',
+            // Biome Specific Enemies
+            GHOST: '👻',
+            SKELETON: '💀',
+            ALIEN: '👽',
+            ROBOT: '🤖',
+            SHARK: '🦈',
+            KRAKEN: '🐙',
+            YETI: '🥶',
+            ICE_GOLEM: '🧊',
+            LAVA_SLIME: '🔥',
+            EVIL_CLOWN: '🤡',
+            PIRATE: '☠️',
+            CRYSTAL_GOLEM: '💠',
             PORTAL: '🕳️',
             CHEST: '🎁'
         };
 
-        const BIOMES = [
-            { name: 'a Savanna', walls: ['🌳','🌾', '🌿'] },
-            { name: 'the Jungle', walls: ['🌴', '🌱', '🍃','🌺'] },
-            { name: 'a Forest', walls: ['🌲','🌳','🍄','🪵'] },
-			{ name: 'a Graveyard', walls: ['🍂','🪵','🕸️', '🪦', '⚰️'] },
-			{ name: 'the Sky', walls: ['☁️','🌈','⛅','🌦️','🌧️'] }, 
-            { name: 'a Desert', walls: ['🏜️', '🪨', '🌵', '☀️'] },
-            { name: 'the Mountains', walls: ['⛰️', '🗻', '🗿'] },
-            { name: 'a Swamp', walls: ['🍃', '🪵', '🌱', '🐸'] },
-            { name: 'a Meadow', walls: ['🌻','🌷','🌼','🌾','🌹'] },
-            { name: 'a Suburb', walls: ['🌳','🏘️','🏠','🏫','🏡','🚗'] },
-            { name: 'the Ocean', walls: ['🌊','🐚','🫧','🪸',]},
-            { name: 'Space', walls: ['🌌','⭐','🌙','🪐']},
-			{ name: 'a Glacier', walls: ['🧊','❄️','🐧']},
-			{ name: 'a Tea Party', walls: ['🎂','🎀','🫖','🍰','🧁']},
-			{ name: 'a Volcano', walls: ['🌋','🔥','🌑']},
-            { name: 'a Cyber City', walls: ['🌃','👾','🎆','📱','📡'] },
-            { name: 'the Crystal Caverns', walls: ['✨','💎', '💠', '🔮'] },
-            { name: 'a Shipwreck', walls: ['🏝️','⛵', '🏴‍☠️', '⚓','🗺️'] },
-			{ name: 'the Circus', walls: ['🎪', '🤡', '🎠', '🎡', '🎈', '🥜'] }	
+        const COMMON_ENEMIES = [
+            SPRITES.RUNNER, SPRITES.PERSON, SPRITES.CARTWHEELER, SPRITES.WALKER, 
+            SPRITES.JUGGLER, SPRITES.LIFTER, SPRITES.PARTNERS, SPRITES.GOLFER, 
+		    SPRITES.KNEELER, SPRITES.BALLER, SPRITES.FENCER
         ];
+
+        const BIOMES = [
+            { name: 'a Savanna', walls: ['🌳','🌾', '🌿'], enemies: COMMON_ENEMIES },
+            { name: 'the Jungle', walls: ['🌴', '🌱', '🍃','🌺'], enemies: COMMON_ENEMIES },
+            { name: 'a Forest', walls: ['🌲','🌳','🍄','🪵'], enemies: COMMON_ENEMIES },
+			{ name: 'a Graveyard', walls: ['🍂','🪵','🕸️', '🪦', '⚰️'], enemies: [SPRITES.GHOST, SPRITES.SKELETON] },
+			{ name: 'the Sky', walls: ['☁️','🌈','⛅','🌦️','🌧️'], enemies: [SPRITES.RUNNER, SPRITES.CARTWHEELER, SPRITES.GHOST] }, 
+            { name: 'a Desert', walls: ['🏜️', '🪨', '🌵', '☀️'], enemies: [SPRITES.WALKER, SPRITES.LIFTER, SPRITES.SKELETON] },
+            { name: 'the Mountains', walls: ['⛰️', '🗻', '🗿'], enemies: [SPRITES.LIFTER, SPRITES.KNEELER, SPRITES.YETI] },
+            { name: 'a Swamp', walls: ['🍃', '🪵', '🌱', '🐸'], enemies: COMMON_ENEMIES },
+            { name: 'a Meadow', walls: ['🌻','🌷','🌼','🌾','🌹'], enemies: [SPRITES.PERSON, SPRITES.CARTWHEELER, SPRITES.WALKER] },
+            { name: 'a Suburb', walls: ['🌳','🏘️','🏠','🏫','🏡','🚗'], enemies: [SPRITES.PERSON, SPRITES.RUNNER, SPRITES.JUGGLER] },
+            { name: 'the Ocean', walls: ['🌊','🐚','🫧','🪸',], enemies: [SPRITES.SHARK, SPRITES.KRAKEN]},
+            { name: 'Space', walls: ['🌌','⭐','🌙','🪐'], enemies: [SPRITES.ALIEN]},
+			{ name: 'a Glacier', walls: ['🧊','❄️','🐧'], enemies: [SPRITES.YETI, SPRITES.ICE_GOLEM]},
+			{ name: 'a Tea Party', walls: ['🎂','🎀','🫖','🍰','🧁'], enemies: [SPRITES.PERSON, SPRITES.JUGGLER]},
+			{ name: 'a Volcano', walls: ['🌋','🔥','🌑'], enemies: [SPRITES.LAVA_SLIME]},
+            { name: 'a Cyber City', walls: ['🌃','👾','🎆','📱','📡'], enemies: [SPRITES.ROBOT, SPRITES.RUNNER] },
+            { name: 'the Crystal Caverns', walls: ['✨','💎', '💠', '🔮'], enemies: [SPRITES.CRYSTAL_GOLEM, SPRITES.GHOST] },
+            { name: 'a Shipwreck', walls: ['🏝️','⛵', '🏴‍☠️', '⚓','🗺️'], enemies: [SPRITES.PIRATE, SPRITES.SKELETON] },
+			{ name: 'the Circus', walls: ['🎪', '🤡', '🎠', '🎡', '🎈', '🥜'], enemies: [SPRITES.EVIL_CLOWN, SPRITES.JUGGLER, SPRITES.LIFTER] }	
+        ];
+
 
         const FOODS = [
             { sprite: '🍎', healAmount: 35 },
@@ -248,6 +269,7 @@
         
         // --- Game State ---
         let map = [], player = {}, enemies = [], items = [], portal = {}, animations = [], gameOver = false, dungeonLevel = 1, currentBiome = {}, turnCount = 0, isPlayerTurn = true;
+        let shuffledBiomes = [];
         let lastPlayerStats = {};
         let isIntroAnimating = false;
         let mapCanvas; // Off-screen canvas for rendering the static map background
@@ -284,6 +306,20 @@
                 case SPRITES.KNEELER:     baseStats = { hp: 50, attack: 3,  defense: 3, vision: 4,  speed: 10  }; break;
 				case SPRITES.BALLER:	  baseStats = { hp: 10, attack: 9,  defense: 1, vision: 10, speed: 15 }; break;
 				case SPRITES.FENCER:	  baseStats = { hp: 25, attack: 12, defense: 3, vision: 5,  speed: 10  }; break;
+                // Biome-specific enemies
+                case SPRITES.GHOST:       baseStats = { hp: 30, attack: 10, defense: 0, vision: 8, speed: 22 }; break;
+                case SPRITES.SKELETON:    baseStats = { hp: 40, attack: 9, defense: 4, vision: 7, speed: 15 }; break;
+                case SPRITES.ALIEN:       baseStats = { hp: 35, attack: 11, defense: 2, vision: 9, speed: 18 }; break;
+                case SPRITES.ROBOT:       baseStats = { hp: 50, attack: 8, defense: 6, vision: 6, speed: 12 }; break;
+                case SPRITES.SHARK:       baseStats = { hp: 45, attack: 12, defense: 3, vision: 10, speed: 25 }; break;
+                case SPRITES.KRAKEN:      baseStats = { hp: 70, attack: 10, defense: 5, vision: 8, speed: 10 }; break;
+                case SPRITES.YETI:        baseStats = { hp: 60, attack: 11, defense: 4, vision: 7, speed: 14 }; break;
+                case SPRITES.ICE_GOLEM:   baseStats = { hp: 65, attack: 8, defense: 8, vision: 5, speed: 9 }; break;
+                case SPRITES.LAVA_SLIME:  baseStats = { hp: 25, attack: 13, defense: 1, vision: 8, speed: 16 }; break;
+                case SPRITES.EVIL_CLOWN:  baseStats = { hp: 40, attack: 10, defense: 3, vision: 9, speed: 20 }; break;
+                case SPRITES.PIRATE:      baseStats = { hp: 45, attack: 10, defense: 5, vision: 8, speed: 16 }; break;
+                case SPRITES.CRYSTAL_GOLEM: baseStats = { hp: 55, attack: 9, defense: 10, vision: 6, speed: 8 }; break;
+                
                 case SPRITES.PORTAL:      return { type, x, y };
                 case SPRITES.CHEST:       return { type, x, y };
                 default:                  return { type, x, y };
@@ -379,11 +415,9 @@
             const maxEnemies = Math.min(floorTiles.length -1, 2 + dungeonLevel);
             for (let i = 0; i < maxEnemies && floorTiles.length > 0; i++) {
                 const pos = floorTiles.pop();
-                const enemyTypes = [
-                    SPRITES.RUNNER, SPRITES.PERSON, SPRITES.CARTWHEELER, SPRITES.WALKER, 
-                    SPRITES.JUGGLER, SPRITES.LIFTER, SPRITES.PARTNERS, SPRITES.GOLFER, 
-		    SPRITES.KNEELER, SPRITES.BALLER, SPRITES.FENCER
-                ];
+                const enemyTypes = currentBiome.enemies && currentBiome.enemies.length > 0 
+                    ? currentBiome.enemies 
+                    : COMMON_ENEMIES;
                 const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
                 enemies.push(createActor(type, pos.x, pos.y));
             }
@@ -692,9 +726,19 @@
         }
         
         function initNextLevel() {
-            dungeonLevel++; animations = [];
-            currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
-            logMessage(`You fall through the hole into ${currentBiome.name}...`, '#ffd700');
+            dungeonLevel++; 
+            animations = [];
+            
+            const biomeIndex = Math.floor((dungeonLevel - 1) / 5) % shuffledBiomes.length;
+            const lastBiomeName = currentBiome.name;
+            currentBiome = shuffledBiomes[biomeIndex];
+
+            if(currentBiome.name !== lastBiomeName) {
+                logMessage(`The environment shifts! You've entered ${currentBiome.name}...`, '#ffd700');
+            } else {
+                logMessage(`You delve deeper into ${currentBiome.name}...`, '#ffd700');
+            }
+
             generateDungeon();
             preDrawMap(); // OPTIMIZATION: Redraw the map background canvas
             player.ap = 0; 
@@ -886,6 +930,15 @@
         }
 
         // --- Helper Functions ---
+        function shuffleArray(array) {
+            const newArr = [...array];
+            for (let i = newArr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+            }
+            return newArr;
+        }
+
         function easeOutBounce(t) {
             if (t < (1 / 2.75)) {
                 return 7.5625 * t * t;
@@ -1080,6 +1133,7 @@
             gameOver = false; dungeonLevel = 1; turnCount = 0;
             animations = []; player = {}; enemies = []; items = []; portal = {}; map = [];
             isPlayerTurn = true;
+            shuffledBiomes = [];
             CHARACTERS = JSON.parse(JSON.stringify(ORIGINAL_CHARACTERS));
             elements.characterGrid.innerHTML = '';
             populateCharacterSelection();
@@ -1117,7 +1171,13 @@
 
             gameOver = false; dungeonLevel = 1; turnCount = 0; isPlayerTurn = true;
             animations = [];
-            currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
+            
+            if (shuffledBiomes.length === 0) {
+                shuffledBiomes = shuffleArray(BIOMES);
+            }
+            const biomeIndex = Math.floor((dungeonLevel - 1) / 5) % shuffledBiomes.length;
+            currentBiome = shuffledBiomes[biomeIndex];
+            
             elements.messageLog.innerHTML = '';
             elements.characterSelectionModal.classList.add('opacity-0', 'pointer-events-none');
             elements.gameUI.classList.remove('hidden');
@@ -1139,4 +1199,3 @@
     </script>
 </body>
 </html>
-
