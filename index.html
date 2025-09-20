@@ -177,26 +177,43 @@
             RUNNER: '🏃',
             PERSON: '🧍',
             CARTWHEELER: '🤸',
+            HBALLER: '🤾',
             WALKER: '🚶‍',
-            JUGGLER: '🤾',
             LIFTER: '🏋️',
             PARTNERS: '🧑‍🤝‍🧑',
             GOLFER: '🏌️',
             KNEELER: '🧎‍',
 	        BALLER: '⛹️',
 	        FENCER: '🤺',
-            // Biome Specific Enemies
+            // Special Enemies
+            PERSON_WITH_CANE: '🧑‍🦯', 
+            PERSON_IN_MOTOR_CHAIR: '🧑‍🦼',
+            DANCING_MAN: '🕺',
+            LEVITATING_MAN: '🕴️',
+            BUNNY_EARS_PEOPLE: '👯',
+            CLIMBER: '🧗',
+            SKIER: '⛷️',
+            SNOWBOARDER: '🏂',
+            SURFER: '🏄',
+            ROWER: '🚣',
+            SWIMMER: '🏊',
+            WRESTLERS: '🤼',
+            WATER_POLO_PLAYER: '🤽',
+            JUGGLER: '🤹', 
+            LOTUS_POSITION: '🧘',
+            FAIRY: '🧚',
+            MERMAID: '🧜',
+            GENIE: '🧞',
+            TROLL: '🧌',
+            OGRE: '👹',
             GHOST: '👻',
             SKELETON: '💀',
             ALIEN: '👽',
             ROBOT: '🤖',
-            SHARK: '🦈',
-            KRAKEN: '🐙',
             YETI: '🥶',
             ICE_GOLEM: '🧊',
             LAVA_SLIME: '🔥',
             EVIL_CLOWN: '🤡',
-            PIRATE: '☠️',
             CRYSTAL_GOLEM: '💠',
             PORTAL: '🕳️',
             CHEST: '🎁'
@@ -204,30 +221,30 @@
 
         const COMMON_ENEMIES = [
             SPRITES.RUNNER, SPRITES.PERSON, SPRITES.CARTWHEELER, SPRITES.WALKER, 
-            SPRITES.JUGGLER, SPRITES.LIFTER, SPRITES.PARTNERS, SPRITES.GOLFER, 
-		    SPRITES.KNEELER, SPRITES.BALLER, SPRITES.FENCER
+            SPRITES.LIFTER, SPRITES.PARTNERS, SPRITES.GOLFER, 
+            SPRITES.KNEELER, SPRITES.BALLER, SPRITES.FENCER, SPRITES.HBALLER
         ];
 
         const BIOMES = [
-            { name: 'a Savanna', walls: ['🌳','🌾', '🌿'], enemies: COMMON_ENEMIES },
-            { name: 'the Jungle', walls: ['🌴', '🌱', '🍃','🌺'], enemies: COMMON_ENEMIES },
-            { name: 'a Forest', walls: ['🌲','🌳','🍄','🪵'], enemies: COMMON_ENEMIES },
-			{ name: 'a Graveyard', walls: ['🍂','🪵','🕸️', '🪦', '⚰️'], enemies: [SPRITES.GHOST, SPRITES.SKELETON] },
-			{ name: 'the Sky', walls: ['☁️','🌈','⛅','🌦️','🌧️'], enemies: [SPRITES.RUNNER, SPRITES.CARTWHEELER, SPRITES.GHOST] }, 
-            { name: 'a Desert', walls: ['🏜️', '🪨', '🌵', '☀️'], enemies: [SPRITES.WALKER, SPRITES.LIFTER, SPRITES.SKELETON] },
-            { name: 'the Mountains', walls: ['⛰️', '🗻', '🗿'], enemies: [SPRITES.LIFTER, SPRITES.KNEELER, SPRITES.YETI] },
-            { name: 'a Swamp', walls: ['🍃', '🪵', '🌱', '🐸'], enemies: COMMON_ENEMIES },
-            { name: 'a Meadow', walls: ['🌻','🌷','🌼','🌾','🌹'], enemies: [SPRITES.PERSON, SPRITES.CARTWHEELER, SPRITES.WALKER] },
-            { name: 'a Suburb', walls: ['🌳','🏘️','🏠','🏫','🏡','🚗'], enemies: [SPRITES.PERSON, SPRITES.RUNNER, SPRITES.JUGGLER] },
-            { name: 'the Ocean', walls: ['🌊','🐚','🫧','🪸',], enemies: [SPRITES.SHARK, SPRITES.KRAKEN]},
-            { name: 'Space', walls: ['🌌','⭐','🌙','🪐'], enemies: [SPRITES.ALIEN]},
-			{ name: 'a Glacier', walls: ['🧊','❄️','🐧'], enemies: [SPRITES.YETI, SPRITES.ICE_GOLEM]},
-			{ name: 'a Tea Party', walls: ['🎂','🎀','🫖','🍰','🧁'], enemies: [SPRITES.PERSON, SPRITES.JUGGLER]},
-			{ name: 'a Volcano', walls: ['🌋','🔥','🌑'], enemies: [SPRITES.LAVA_SLIME]},
-            { name: 'a Cyber City', walls: ['🌃','👾','🎆','📱','📡'], enemies: [SPRITES.ROBOT, SPRITES.RUNNER] },
-            { name: 'the Crystal Caverns', walls: ['✨','💎', '💠', '🔮'], enemies: [SPRITES.CRYSTAL_GOLEM, SPRITES.GHOST] },
-            { name: 'a Shipwreck', walls: ['🏝️','⛵', '🏴‍☠️', '⚓','🗺️'], enemies: [SPRITES.PIRATE, SPRITES.SKELETON] },
-			{ name: 'the Circus', walls: ['🎪', '🤡', '🎠', '🎡', '🎈', '🥜'], enemies: [SPRITES.EVIL_CLOWN, SPRITES.JUGGLER, SPRITES.LIFTER] }	
+            { name: 'a Savanna', walls: ['🌳','🌾', '🌿'], specialEnemies: [] },
+            { name: 'the Jungle', walls: ['🌴', '🌱', '🍃','🌺'], specialEnemies: [SPRITES.LOTUS_POSITION, SPRITES.WRESTLERS] },
+            { name: 'a Forest', walls: ['🌲','🌳','🍄','🪵'], specialEnemies: [SPRITES.FAIRY, SPRITES.TROLL] },
+			{ name: 'a Graveyard', walls: ['🍂','🪵','🕸️', '🪦', '⚰️'], specialEnemies: [SPRITES.GHOST, SPRITES.SKELETON] },
+			{ name: 'the Sky', walls: ['☁️','🌈','⛅','🌦️','🌧️'], specialEnemies: [SPRITES.GHOST, SPRITES.FAIRY] }, 
+            { name: 'a Desert', walls: ['🏜️', '🪨', '🌵', '☀️'], specialEnemies: [SPRITES.SKELETON, SPRITES.GENIE] },
+            { name: 'the Mountains', walls: ['⛰️', '🗻', '🗿'], specialEnemies: [SPRITES.YETI, SPRITES.CLIMBER, SPRITES.TROLL] },
+            { name: 'a Swamp', walls: ['🍃', '🪵', '🌱', '🐸'], specialEnemies: [SPRITES.OGRE] },
+            { name: 'a Meadow', walls: ['🌻','🌷','🌼','🌾','🌹'], specialEnemies: [SPRITES.FAIRY] },
+            { name: 'a Suburb', walls: ['🌳','🏘️','🏠','🏫','🏡','🚗'], specialEnemies: [SPRITES.PERSON_WITH_CANE, SPRITES.PERSON_IN_MOTOR_CHAIR] },
+            { name: 'the Ocean', walls: ['🌊','🐚','🫧','🪸',], specialEnemies: [SPRITES.SWIMMER, SPRITES.SURFER, SPRITES.ROWER, SPRITES.WATER_POLO_PLAYER, SPRITES.MERMAID]},
+            { name: 'Space', walls: [''✨'','⭐','🌙','🪐'], specialEnemies: [SPRITES.ALIEN]},
+			{ name: 'a Glacier', walls: ['🧊','❄️','🐧'], specialEnemies: [SPRITES.YETI, SPRITES.ICE_GOLEM, SPRITES.SKIER, SPRITES.SNOWBOARDER]},
+			{ name: 'a Tea Party', walls: ['🎂','🎀','🫖','🍰','🧁'], specialEnemies: []},
+			{ name: 'a Volcano', walls: ['🌋','🔥','🌑'], specialEnemies: [SPRITES.LAVA_SLIME]},
+            { name: 'a Cyber City', walls: ['🌃','👾','🎆','📱','📡'], specialEnemies: [SPRITES.ROBOT, SPRITES.LEVITATING_MAN, SPRITES.PERSON_IN_MOTOR_CHAIR] },
+            { name: 'the Crystal Caverns', walls: ['💎', '💠', '🔮'], specialEnemies: [SPRITES.CRYSTAL_GOLEM, SPRITES.GHOST] },
+            { name: 'a Shipwreck', walls: ['🏝️','⛵', '🏴‍☠️', '⚓','🗺️'], specialEnemies: [SPRITES.SKELETON, SPRITES.TROLL, SPRITES.OGRE, SPRITES.GENIE] },
+			{ name: 'the Circus', walls: ['🎪', '🤡', '🎠', '🎡', '🎈', '🥜'], specialEnemies: [SPRITES.EVIL_CLOWN, SPRITES.WRESTLERS, SPRITES.BUNNY_EARS_PEOPLE] }	
         ];
 
 
@@ -299,25 +316,45 @@
                 case SPRITES.PERSON:      baseStats = { hp: 30, attack: 4,  defense: 1, vision: 6,  speed: 15 }; break;
                 case SPRITES.CARTWHEELER: baseStats = { hp: 25, attack: 5,  defense: 1, vision: 8,  speed: 25 }; break;
                 case SPRITES.WALKER:      baseStats = { hp: 10, attack: 5,  defense: 1, vision: 7,  speed: 12 }; break;
-                case SPRITES.JUGGLER:     baseStats = { hp: 30, attack: 8,  defense: 2, vision: 8,  speed: 20 }; break;
                 case SPRITES.LIFTER:      baseStats = { hp: 40, attack: 7,  defense: 5, vision: 6,  speed: 9 }; break;
                 case SPRITES.PARTNERS:    baseStats = { hp: 65, attack: 14, defense: 2, vision: 9,  speed: 8 }; break;
                 case SPRITES.GOLFER:      baseStats = { hp: 35, attack: 10, defense: 2, vision: 7,  speed: 18 }; break;
                 case SPRITES.KNEELER:     baseStats = { hp: 50, attack: 3,  defense: 3, vision: 4,  speed: 10  }; break;
-				case SPRITES.BALLER:	  baseStats = { hp: 10, attack: 9,  defense: 1, vision: 10, speed: 15 }; break;
+				case SPRITES.HBALLER:     baseStats = { hp: 30, attack: 8,  defense: 2, vision: 8,  speed: 20 }; break;
+                case SPRITES.BALLER:	  baseStats = { hp: 10, attack: 9,  defense: 1, vision: 10, speed: 15 }; break;
 				case SPRITES.FENCER:	  baseStats = { hp: 25, attack: 12, defense: 3, vision: 5,  speed: 10  }; break;
+                
+                // New Enemies
+                case SPRITES.PERSON_WITH_CANE:     baseStats = { hp: 55, attack: 8,  defense: 4, vision: 5,  speed: 5 }; break;
+                case SPRITES.PERSON_IN_MOTOR_CHAIR: baseStats = { hp: 45, attack: 7,  defense: 6, vision: 7,  speed: 18 }; break;
+                case SPRITES.DANCING_MAN:           baseStats = { hp: 20, attack: 6,  defense: 1, vision: 8,  speed: 28 }; break;
+                case SPRITES.LEVITATING_MAN:        baseStats = { hp: 30, attack: 9,  defense: 2, vision: 10, speed: 17 }; break;
+                case SPRITES.BUNNY_EARS_PEOPLE:     baseStats = { hp: 60, attack: 12, defense: 2, vision: 9,  speed: 10 }; break;
+                case SPRITES.CLIMBER:               baseStats = { hp: 35, attack: 8,  defense: 4, vision: 7,  speed: 14 }; break;
+                case SPRITES.SKIER:                 baseStats = { hp: 25, attack: 7,  defense: 2, vision: 9,  speed: 32 }; break;
+                case SPRITES.SNOWBOARDER:           baseStats = { hp: 30, attack: 6,  defense: 3, vision: 9,  speed: 30 }; break;
+                case SPRITES.SURFER:                baseStats = { hp: 30, attack: 8,  defense: 2, vision: 8,  speed: 24 }; break;
+                case SPRITES.ROWER:                 baseStats = { hp: 40, attack: 11, defense: 3, vision: 6,  speed: 11 }; break;
+                case SPRITES.SWIMMER:               baseStats = { hp: 20, attack: 7,  defense: 1, vision: 8,  speed: 26 }; break;
+                case SPRITES.WRESTLERS:             baseStats = { hp: 70, attack: 15, defense: 3, vision: 8,  speed: 7 }; break;
+                case SPRITES.WATER_POLO_PLAYER:     baseStats = { hp: 35, attack: 10, defense: 2, vision: 7,  speed: 19 }; break;
+                case SPRITES.JUGGLER:               baseStats = { hp: 30, attack: 8,  defense: 2, vision: 8,  speed: 20 }; break;
+                case SPRITES.LOTUS_POSITION:        baseStats = { hp: 60, attack: 2,  defense: 8, vision: 4,  speed: 2 }; break;
+                case SPRITES.FAIRY:                 baseStats = { hp: 15, attack: 11, defense: 0, vision: 10, speed: 29 }; break;
+                case SPRITES.MERMAID:               baseStats = { hp: 40, attack: 9,  defense: 3, vision: 8,  speed: 21 }; break;
+                case SPRITES.GENIE:                 baseStats = { hp: 50, attack: 13, defense: 4, vision: 9,  speed: 18 }; break;
+                case SPRITES.TROLL:                 baseStats = { hp: 80, attack: 12, defense: 6, vision: 6,  speed: 6 }; break;
+                case SPRITES.OGRE:                  baseStats = { hp: 90, attack: 16, defense: 5, vision: 5,  speed: 5 }; break;
+
                 // Biome-specific enemies
                 case SPRITES.GHOST:       baseStats = { hp: 30, attack: 10, defense: 0, vision: 8, speed: 22 }; break;
                 case SPRITES.SKELETON:    baseStats = { hp: 40, attack: 9, defense: 4, vision: 7, speed: 15 }; break;
                 case SPRITES.ALIEN:       baseStats = { hp: 35, attack: 11, defense: 2, vision: 9, speed: 18 }; break;
                 case SPRITES.ROBOT:       baseStats = { hp: 50, attack: 8, defense: 6, vision: 6, speed: 12 }; break;
-                case SPRITES.SHARK:       baseStats = { hp: 45, attack: 12, defense: 3, vision: 10, speed: 25 }; break;
-                case SPRITES.KRAKEN:      baseStats = { hp: 70, attack: 10, defense: 5, vision: 8, speed: 10 }; break;
                 case SPRITES.YETI:        baseStats = { hp: 60, attack: 11, defense: 4, vision: 7, speed: 14 }; break;
                 case SPRITES.ICE_GOLEM:   baseStats = { hp: 65, attack: 8, defense: 8, vision: 5, speed: 9 }; break;
                 case SPRITES.LAVA_SLIME:  baseStats = { hp: 25, attack: 13, defense: 1, vision: 8, speed: 16 }; break;
                 case SPRITES.EVIL_CLOWN:  baseStats = { hp: 40, attack: 10, defense: 3, vision: 9, speed: 20 }; break;
-                case SPRITES.PIRATE:      baseStats = { hp: 45, attack: 10, defense: 5, vision: 8, speed: 16 }; break;
                 case SPRITES.CRYSTAL_GOLEM: baseStats = { hp: 55, attack: 9, defense: 10, vision: 6, speed: 8 }; break;
                 
                 case SPRITES.PORTAL:      return { type, x, y };
@@ -415,10 +452,13 @@
             const maxEnemies = Math.min(floorTiles.length -1, 2 + dungeonLevel);
             for (let i = 0; i < maxEnemies && floorTiles.length > 0; i++) {
                 const pos = floorTiles.pop();
-                const enemyTypes = currentBiome.enemies && currentBiome.enemies.length > 0 
-                    ? currentBiome.enemies 
-                    : COMMON_ENEMIES;
-                const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+                
+                let availableEnemies = [...COMMON_ENEMIES];
+                if (currentBiome.specialEnemies && currentBiome.specialEnemies.length > 0) {
+                    availableEnemies.push(...currentBiome.specialEnemies);
+                }
+
+                const type = availableEnemies[Math.floor(Math.random() * availableEnemies.length)];
                 enemies.push(createActor(type, pos.x, pos.y));
             }
 
